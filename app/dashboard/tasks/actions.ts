@@ -30,6 +30,35 @@ export async function reorderTask(taskId: string, project_id: string | null) {
     revalidatePath("/dashboard/tasks");
 }
 
+export async function updateTask(formData: FormData) {
+    const supabase = await supabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const id = formData.get("id") as string;
+    await supabase.from("tasks").update({
+        title: formData.get("title") as string,
+        description: (formData.get("description") as string) || null,
+        priority: Number(formData.get("priority")),
+        project_id: (formData.get("project_id") as string) || null,
+        due_date: (formData.get("due_date") as string) || null,
+    }).eq("id", id);
+    revalidatePath("/dashboard/tasks");
+}
+
+export async function createProject(formData: FormData) {
+    const supabase = await supabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    await supabase.from("projects").insert({
+        user_id: user.id,
+        name: formData.get("name") as string,
+        color: (formData.get("color") as string) || "#3b82f6",
+    });
+    revalidatePath("/dashboard/tasks");
+}
+
 export async function deleteTask(taskId: string) {
     const supabase = await supabaseServer();
     await supabase.from("tasks").delete().eq("id", taskId);

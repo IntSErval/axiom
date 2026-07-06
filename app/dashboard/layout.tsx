@@ -6,12 +6,12 @@ import { cn } from '@/lib/utils';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 
 const TABS = [
-    { href: '/dashboard', label: 'Home', exact: true },
-    { href: '/dashboard/tasks', label: 'Tasks' },
-    { href: '/dashboard/habits', label: 'Habits' },
-    { href: '/dashboard/finance', label: 'Finance' },
-    { href: '/dashboard/goals', label: 'Goals' },
-] as const;
+    { href: '/dashboard', label: 'Home', exact: true } as const,
+    { href: '/dashboard/tasks', label: 'Tasks', exact: false } as const,
+    { href: '/dashboard/habits', label: 'Habits', exact: false } as const,
+    { href: '/dashboard/finance', label: 'Finance', exact: false } as const,
+    { href: '/dashboard/goals', label: 'Goals', exact: false } as const,
+];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
