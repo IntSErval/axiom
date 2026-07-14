@@ -13,6 +13,10 @@ const PRIORITY_COLORS: Record<1 | 2 | 3 | 4, string> = {
     4: "bg-zinc-500/20 text-zinc-400",
 };
 
+function fmtDate(d: string) {
+    return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
 const QUICK = [
     { href: "/dashboard/tasks", label: "Tasks" },
     { href: "/dashboard/habits", label: "Habits" },
@@ -31,7 +35,6 @@ export default async function DashboardHomePage() {
     const [
         { data: topTaskRows },
         { data: habits },
-        { data: habitLogs },
         { data: accounts },
         { data: goals },
     ] = await Promise.all([
@@ -47,10 +50,6 @@ export default async function DashboardHomePage() {
             .select("id,name,streak")
             .eq("user_id", uid),
         supabase
-            .from("habit_logs")
-            .select("id,habit_id,completed_at")
-            .gte("completed_at", ninetyDaysAgo),
-        supabase
             .from("accounts")
             .select("id,balance")
             .eq("user_id", uid),
@@ -61,6 +60,17 @@ export default async function DashboardHomePage() {
             .eq("status", "active"),
     ]);
 
+    const habitList = (habits as Pick<Habit, "id" | "name" | "streak">[] | null) ?? [];
+    // ponytail: fetch logs only after habits resolve so we can scope by habitIds; skip query if no habits
+    const habitIds = habitList.map((h) => h.id);
+    const { data: habitLogs } = habitIds.length
+        ? await supabase
+            .from("habit_logs")
+            .select("id,habit_id,completed_at")
+            .in("habit_id", habitIds)
+            .gte("completed_at", ninetyDaysAgo)
+        : { data: [] };
+
     // --- Task widget ---
     const topTask = (topTaskRows as Task[] | null)?.[0] ?? null;
     const isOverdue = topTask?.due_date
@@ -68,7 +78,6 @@ export default async function DashboardHomePage() {
         : false;
 
     // --- Habit streak widget ---
-    const habitList = (habits as Pick<Habit, "id" | "name" | "streak">[] | null) ?? [];
     const logs = (habitLogs as Pick<HabitLog, "id" | "habit_id" | "completed_at">[] | null) ?? [];
     let bestStreak = 0;
     let bestHabitName = "";
@@ -119,7 +128,7 @@ export default async function DashboardHomePage() {
                                     </span>
                                     {topTask.due_date && (
                                         <span className={`text-xs ${isOverdue ? "text-rose-400" : "text-zinc-500"}`}>
-                                            {isOverdue ? "Overdue" : topTask.due_date}
+                                            {isOverdue ? "Overdue" : fmtDate(topTask.due_date)}
                                         </span>
                                     )}
                                 </div>
