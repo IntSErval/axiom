@@ -6,8 +6,6 @@ import { DeleteIcon } from "@/components/ui/icons";
 import { createTransaction, createAccount, deleteTransaction } from "@/app/dashboard/finance/actions";
 import type { Account, Transaction, Budget } from "@/lib/database";
 
-const TODAY = new Date().toISOString().slice(0, 10);
-
 function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -15,6 +13,7 @@ function fmtDate(iso: string) {
 export function FinanceDashboard({ accounts, transactions: initialTxns, budgets }: {
     accounts: Account[]; transactions: Transaction[]; budgets: Budget[];
 }) {
+    const TODAY = new Date().toISOString().slice(0, 10);
     const [txns, setTxns] = useState(initialTxns);
     const [txnOpen, setTxnOpen] = useState(false);
     const [accOpen, setAccOpen] = useState(false);
@@ -27,9 +26,10 @@ export function FinanceDashboard({ accounts, transactions: initialTxns, budgets 
 
     async function handleDeleteTxn(id: string) {
         if (!window.confirm("Delete this transaction?")) return;
-        // ponytail: optimistic delete, server revalidates on next nav
-        setTxns((prev) => prev.filter((t) => t.id !== id));
-        await deleteTransaction(id);
+        const prev = txns;
+        setTxns((curr) => curr.filter((t) => t.id !== id)); // ponytail: optimistic, rolls back on error
+        try { await deleteTransaction(id); }
+        catch { setTxns(prev); }
     }
 
     return (
@@ -60,7 +60,7 @@ export function FinanceDashboard({ accounts, transactions: initialTxns, budgets 
                     <GlassCard key={acc.id} className="p-4">
                         <p className="text-sm text-zinc-500">{acc.name}</p>
                         <p className="text-xl font-bold text-zinc-50">${acc.balance.toLocaleString()}</p>
-                        <p className="text-xs text-zinc-600 mt-1 capitalize">{acc.type}</p>
+                        <p className="text-xs text-zinc-500 mt-1 capitalize">{acc.type}</p>
                     </GlassCard>
                 ))}
             </div>
@@ -122,7 +122,7 @@ export function FinanceDashboard({ accounts, transactions: initialTxns, budgets 
 
             {/* Add Transaction Modal */}
             <GlassModal open={txnOpen} onOpenChange={setTxnOpen} title="Add Transaction">
-                <form action={async (fd) => { await createTransaction(fd); setTxnOpen(false); }} className="space-y-4 mt-2">
+                <form action={async (fd) => { try { await createTransaction(fd); setTxnOpen(false); } catch (e) { alert((e as Error).message); } }} className="space-y-4 mt-2">
                     <div>
                         <label htmlFor="txn-description" className="block text-xs text-zinc-500 mb-1">Description (optional)</label>
                         <input
@@ -192,7 +192,7 @@ export function FinanceDashboard({ accounts, transactions: initialTxns, budgets 
 
             {/* Add Account Modal */}
             <GlassModal open={accOpen} onOpenChange={setAccOpen} title="Add Account">
-                <form action={async (fd) => { await createAccount(fd); setAccOpen(false); }} className="space-y-4 mt-2">
+                <form action={async (fd) => { try { await createAccount(fd); setAccOpen(false); } catch (e) { alert((e as Error).message); } }} className="space-y-4 mt-2">
                     <div>
                         <label htmlFor="acc-name" className="block text-xs text-zinc-500 mb-1">Account Name</label>
                         <input
