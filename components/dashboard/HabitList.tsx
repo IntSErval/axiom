@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { EditIcon, DeleteIcon } from "@/components/ui/icons";
@@ -68,7 +69,16 @@ export function HabitList({ habits: initialHabits, logs }: { habits: Habit[]; lo
                         <div>
                             <p className="text-zinc-50">{habit.name}</p>
                             <p className="text-sm text-zinc-500">
-                                {streak > 0 && <span className="text-amber-400">🔥 {streak} day streak</span>}
+                                {streak > 0 && (
+                                    <motion.span
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: "spring", stiffness: 400, damping: 12 }}
+                                        className="text-amber-400 inline-block"
+                                    >
+                                        🔥 {streak} day streak
+                                    </motion.span>
+                                )}
                             </p>
                         </div>
                         <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
+import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { EditIcon, DeleteIcon } from "@/components/ui/icons";
@@ -237,7 +238,12 @@ export function GoalList({ goals: initialGoals, milestones: initialMilestones }:
                         </div>
 
                         <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden mb-3">
-                            <div className="h-full rounded-full bg-violet-500 transition-all duration-300" style={{ width: `${pct}%` }} />
+                            <motion.div
+                                className="h-full rounded-full bg-violet-500"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct}%` }}
+                                transition={{ duration: 0.6, ease: "easeOut" }}
+                            />
                         </div>
 
                         <div className="flex items-center gap-2 mb-3">

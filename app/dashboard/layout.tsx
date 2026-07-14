@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { ChatPanel } from '@/components/agents/ChatPanel';
 import { InsightStack } from '@/components/dashboard/InsightStack';
+import { fadeSlideUp } from '@/lib/motin';
 
 const TABS = [
     { href: '/dashboard', label: 'Home', exact: true } as const,
@@ -34,7 +36,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     })}
                 </GlassPanel>
             </header>
-            <div className="mx-auto max-w-3xl px-6">{children}</div>
+            <div className="mx-auto max-w-3xl px-6">
+                <AnimatePresence mode="wait">
+                    <motion.div key={pathname} {...fadeSlideUp}>
+                        {children}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
             <InsightStack />
             <ChatPanel />
         </div>

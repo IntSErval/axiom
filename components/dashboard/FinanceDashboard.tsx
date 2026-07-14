@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { DeleteIcon } from "@/components/ui/icons";
@@ -133,7 +134,12 @@ export function FinanceDashboard({ accounts, transactions: initialTxns, budgets 
                                 </span>
                             </div>
                             <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden">
-                                <div className={`h-full rounded-full ${over ? "bg-amber-500" : "bg-blue-500"}`} style={{ width: `${pct}%` }} />
+                                <motion.div
+                                    className={`h-full rounded-full ${over ? "bg-amber-500" : "bg-blue-500"}`}
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${pct}%` }}
+                                    transition={{ duration: 0.6, ease: "easeOut" }}
+                                />
                             </div>
                         </GlassCard>
                     );

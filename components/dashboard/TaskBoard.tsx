@@ -1,5 +1,6 @@
 ﻿"use client";
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -48,6 +49,7 @@ function TaskRow({
 
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             <GlassCard className="p-4 mb-2 flex items-center justify-between hover:bg-white/[0.05] transition-colors group">
                 <div className="flex items-center gap-3 min-w-0">
                     <input
@@ -91,6 +93,7 @@ function TaskRow({
                     </button>
                 </div>
             </GlassCard>
+            </motion.div>
         </div>
     );
 }
