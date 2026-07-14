@@ -1,5 +1,5 @@
 ﻿"use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -271,6 +271,19 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Task | null>(null);
     const [projectModalOpen, setProjectModalOpen] = useState(false);
+    const [insight, setInsight] = useState<string | null>(null);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        fetch("/api/nim/task-agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tasks }),
+        })
+            .then(r => r.json())
+            .then(d => setInsight(d.insight ?? null))
+            .catch(() => {}); // silently fail — AI is non-critical
+    }, []);
 
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
@@ -371,6 +384,13 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
                     </button>
                 </div>
             </div>
+            {insight && (
+                <div className="mt-3 flex items-center gap-2 text-sm mb-6">
+                    <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 italic">
+                        ✦ {insight}
+                    </span>
+                </div>
+            )}
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {renderTasks()}

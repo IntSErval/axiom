@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { EditIcon, DeleteIcon } from "@/components/ui/icons";
@@ -15,6 +15,19 @@ type ModalState =
 export function HabitList({ habits: initialHabits, logs }: { habits: Habit[]; logs: HabitLog[] }) {
     const [habits, setHabits] = useState(initialHabits);
     const [modal, setModal] = useState<ModalState>({ mode: "closed" });
+    const [insight, setInsight] = useState<string | null>(null);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        fetch("/api/nim/habit-agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ habits: initialHabits, logs }),
+        })
+            .then(r => r.json())
+            .then(d => setInsight(d.insight ?? null))
+            .catch(() => {}); // silently fail — AI is non-critical
+    }, []);
 
     async function handleDelete(habit: Habit) {
         if (!window.confirm(`Delete "${habit.name}"?`)) return;
@@ -37,6 +50,13 @@ export function HabitList({ habits: initialHabits, logs }: { habits: Habit[]; lo
                     + New Habit
                 </button>
             </div>
+            {insight && (
+                <div className="mt-3 flex items-center gap-2 text-sm mb-4">
+                    <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 italic">
+                        ✦ {insight}
+                    </span>
+                </div>
+            )}
 
             {habits.map((habit) => {
                 const habitLogs = logs.filter((l) => l.habit_id === habit.id);
