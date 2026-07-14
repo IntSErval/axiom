@@ -96,7 +96,7 @@ export async function GET() {
             // Sum absolute negative amounts per category
             const spendByCategory: Record<string, number> = {};
             for (const tx of transactions) {
-                if (tx.amount < 0) {
+                if (tx.amount < 0 && tx.category) {
                     spendByCategory[tx.category] =
                         (spendByCategory[tx.category] ?? 0) + Math.abs(tx.amount);
                 }

@@ -13,7 +13,7 @@ function arrayMove<T>(array: T[], from: number, to: number): T[] {
 }
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
-import { updateTaskStatus, reorderTask, deleteTask, createTask, updateTask, createProject } from "@/app/dashboard/tasks/actions";
+import { updateTaskStatus, deleteTask, createTask, updateTask, createProject } from "@/app/dashboard/tasks/actions";
 import type { Task, Project } from "@/lib/database";
 
 const PRIORITY_COLOR: Record<number, string> = {
