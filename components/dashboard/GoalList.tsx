@@ -65,7 +65,7 @@ function GoalForm({ initial, onDone }: { initial?: Goal; onDone: () => void }) {
                 <button type="button" onClick={onDone} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-zinc-50 text-sm">
                     Cancel
                 </button>
-                <button type="submit" disabled={pending} className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-white text-sm disabled:opacity-50">
+                <button type="submit" disabled={pending} className="px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 border border-violet-500/30 text-sm disabled:opacity-50">
                     {pending ? "Saving…" : initial ? "Save" : "Create"}
                 </button>
             </div>
@@ -107,7 +107,7 @@ function MilestoneForm({ goalId, onDone }: { goalId: string; onDone: () => void 
                 <button type="button" onClick={onDone} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-zinc-50 text-sm">
                     Cancel
                 </button>
-                <button type="submit" disabled={pending} className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-white text-sm disabled:opacity-50">
+                <button type="submit" disabled={pending} className="px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 border border-violet-500/30 text-sm disabled:opacity-50">
                     {pending ? "Adding…" : "Add"}
                 </button>
             </div>
@@ -148,11 +148,13 @@ export function GoalList({ goals: initialGoals, milestones: initialMilestones }:
         if (isNaN(val)) { alert("Invalid amount"); return; }
         const prev = goals;
         setGoals((gs) => gs.map((g) => g.id === goal.id ? { ...g, current_amount: val } : g));
+        setProgressInputs((p) => ({ ...p, [goal.id]: String(val) }));
         startTransition(async () => {
             try {
                 await updateGoalProgress(goal.id, val);
             } catch (err) {
                 setGoals(prev);
+                setProgressInputs((p) => ({ ...p, [goal.id]: String(goal.current_amount) }));
                 alert((err as Error).message);
             }
         });
@@ -179,7 +181,7 @@ export function GoalList({ goals: initialGoals, milestones: initialMilestones }:
                 <button
                     type="button"
                     onClick={() => setNewGoalOpen(true)}
-                    className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-white text-sm font-medium"
+                    className="px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 border border-violet-500/30 text-sm font-medium"
                 >
                     + New Goal
                 </button>
@@ -270,7 +272,7 @@ export function GoalList({ goals: initialGoals, milestones: initialMilestones }:
             </GlassModal>
 
             <GlassModal open={!!editGoal} onOpenChange={(v) => { if (!v) setEditGoal(null); }} title="Edit Goal">
-                {editGoal && <GoalForm initial={editGoal} onDone={() => setEditGoal(null)} />}
+                {editGoal && <GoalForm key={editGoal.id} initial={editGoal} onDone={() => setEditGoal(null)} />}
             </GlassModal>
 
             <GlassModal open={!!msGoalId} onOpenChange={(v) => { if (!v) setMsGoalId(null); }} title="Add Milestone">

@@ -10,21 +10,29 @@ async function getUser() {
     return { supabase, user };
 }
 
+function parsePositiveAmount(formData: FormData, field: string): number {
+    const raw = (formData.get(field) as string)?.trim();
+    if (!raw) throw new Error(`${field} is required`);
+    const n = Number(raw);
+    if (isNaN(n) || n <= 0) throw new Error(`${field} must be a positive number`);
+    return n;
+}
+
 export async function createGoal(formData: FormData) {
     const { supabase, user } = await getUser();
     const title = formData.get("title") as string;
     if (!title?.trim()) throw new Error("Title is required");
-    const raw = Number(formData.get("target_amount"));
-    if (isNaN(raw)) throw new Error("Invalid target amount");
-    const deadline = (formData.get("deadline") as string) || null;
-    await supabase.from("goals").insert({
+    const target_amount = parsePositiveAmount(formData, "target_amount");
+    const deadline = (formData.get("deadline") as string)?.trim() || null;
+    const { error } = await supabase.from("goals").insert({
         user_id: user.id,
         title: title.trim(),
-        target_amount: raw,
+        target_amount,
         current_amount: 0,
-        deadline: deadline || null,
+        deadline,
         status: "active",
     });
+    if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
 
@@ -33,54 +41,65 @@ export async function updateGoal(formData: FormData) {
     const id = formData.get("id") as string;
     const title = formData.get("title") as string;
     if (!title?.trim()) throw new Error("Title is required");
-    const raw = Number(formData.get("target_amount"));
-    if (isNaN(raw)) throw new Error("Invalid target amount");
-    const deadline = (formData.get("deadline") as string) || null;
+    const target_amount = parsePositiveAmount(formData, "target_amount");
+    const deadline = (formData.get("deadline") as string)?.trim() || null;
     const status = formData.get("status") as string;
-    await supabase.from("goals").update({
+    const { error } = await supabase.from("goals").update({
         title: title.trim(),
-        target_amount: raw,
-        deadline: deadline || null,
+        target_amount,
+        deadline,
         status,
     }).eq("id", id).eq("user_id", user.id);
+    if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
 
 export async function updateGoalProgress(goalId: string, current_amount: number) {
     if (isNaN(current_amount)) throw new Error("Invalid amount");
     const { supabase, user } = await getUser();
-    await supabase.from("goals").update({ current_amount }).eq("id", goalId).eq("user_id", user.id);
+    const { error } = await supabase.from("goals").update({ current_amount }).eq("id", goalId).eq("user_id", user.id);
+    if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
 
 export async function deleteGoal(goalId: string) {
     const { supabase, user } = await getUser();
-    await supabase.from("goals").delete().eq("id", goalId).eq("user_id", user.id);
+    const { error } = await supabase.from("goals").delete().eq("id", goalId).eq("user_id", user.id);
+    if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
 
 export async function createMilestone(formData: FormData) {
-    const { supabase } = await getUser();
+    const { supabase, user } = await getUser();
     const goal_id = formData.get("goal_id") as string;
     const title = formData.get("title") as string;
     if (!goal_id) throw new Error("goal_id is required");
     if (!title?.trim()) throw new Error("Title is required");
-    const raw = Number(formData.get("target_amount"));
-    if (isNaN(raw)) throw new Error("Invalid target amount");
-    const due_date = (formData.get("due_date") as string) || null;
-    await supabase.from("milestones").insert({
+    const target_amount = parsePositiveAmount(formData, "target_amount");
+    const due_date = (formData.get("due_date") as string)?.trim() || null;
+    // Ownership check: ensure this goal belongs to the caller
+    const { data: goal } = await supabase.from("goals").select("id").eq("id", goal_id).eq("user_id", user.id).single();
+    if (!goal) throw new Error("Goal not found");
+    const { error } = await supabase.from("milestones").insert({
         goal_id,
         title: title.trim(),
-        target_amount: raw,
+        target_amount,
         status: "pending",
-        due_date: due_date || null,
+        due_date,
     });
+    if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
 
 export async function toggleMilestone(milestoneId: string, currentStatus: MilestoneStatus) {
-    const { supabase } = await getUser();
+    const { supabase, user } = await getUser();
+    // Ownership check: join through goal to verify caller owns it
+    const { data: ms } = await supabase.from("milestones").select("goal_id").eq("id", milestoneId).single();
+    if (!ms) throw new Error("Milestone not found");
+    const { data: goal } = await supabase.from("goals").select("id").eq("id", ms.goal_id).eq("user_id", user.id).single();
+    if (!goal) throw new Error("Not authorized");
     const next: MilestoneStatus = currentStatus === "achieved" ? "pending" : "achieved";
-    await supabase.from("milestones").update({ status: next }).eq("id", milestoneId);
+    const { error } = await supabase.from("milestones").update({ status: next }).eq("id", milestoneId);
+    if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
