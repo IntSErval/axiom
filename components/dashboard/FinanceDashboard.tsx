@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { DeleteIcon } from "@/components/ui/icons";
@@ -17,6 +17,19 @@ export function FinanceDashboard({ accounts, transactions: initialTxns, budgets 
     const [txns, setTxns] = useState(initialTxns);
     const [txnOpen, setTxnOpen] = useState(false);
     const [accOpen, setAccOpen] = useState(false);
+    const [insight, setInsight] = useState<string | null>(null);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        fetch("/api/nim/finance-agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accounts, transactions: initialTxns, budgets }),
+        })
+            .then(r => r.json())
+            .then(d => setInsight(d.insight ?? null))
+            .catch(() => {}); // silently fail — AI is non-critical
+    }, []);
 
     const spendByCategory = (category: string) =>
         txns.filter((t) => t.category === category && t.amount < 0)
@@ -53,6 +66,13 @@ export function FinanceDashboard({ accounts, transactions: initialTxns, budgets 
                     </button>
                 </div>
             </div>
+            {insight && (
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                    <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 italic">
+                        ✦ {insight}
+                    </span>
+                </div>
+            )}
 
             {/* Accounts */}
             <div className="grid grid-cols-2 gap-4">

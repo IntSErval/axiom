@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { EditIcon, DeleteIcon } from "@/components/ui/icons";
@@ -120,6 +120,20 @@ export function GoalList({ goals: initialGoals, milestones: initialMilestones }:
     const [goals, setGoals] = useState(initialGoals);
     const [milestones, setMilestones] = useState(initialMilestones);
 
+    const [insight, setInsight] = useState<string | null>(null);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        fetch("/api/nim/goals-agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ goals: initialGoals, milestones: initialMilestones }),
+        })
+            .then(r => r.json())
+            .then(d => setInsight(d.insight ?? null))
+            .catch(() => {}); // silently fail — AI is non-critical
+    }, []);
+
     const [newGoalOpen, setNewGoalOpen] = useState(false);
     const [editGoal, setEditGoal] = useState<Goal | null>(null);
     const [msGoalId, setMsGoalId] = useState<string | null>(null);
@@ -186,6 +200,13 @@ export function GoalList({ goals: initialGoals, milestones: initialMilestones }:
                     + New Goal
                 </button>
             </div>
+            {insight && (
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                    <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 italic">
+                        ✦ {insight}
+                    </span>
+                </div>
+            )}
 
             {goals.map((goal) => {
                 const pct = Math.min(100, goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) * 100 : 0);
