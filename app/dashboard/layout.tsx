@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { GlassPanel } from '@/components/ui/GlassPanel';
+import { ChatPanel } from '@/components/agents/ChatPanel';
 
 const TABS = [
     { href: '/dashboard', label: 'Home', exact: true } as const,
@@ -33,6 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </GlassPanel>
             </header>
             <div className="mx-auto max-w-3xl px-6">{children}</div>
+            <ChatPanel />
         </div>
     );
 }

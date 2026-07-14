@@ -1,0 +1,136 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+
+interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+export function ChatPanel() {
+    const [open, setOpen] = useState(false);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [input, setInput] = useState('');
+    const [loading, setLoading] = useState(false);
+    const bottomRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (bottomRef.current) {
+            bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages, loading]);
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        const text = input.trim();
+        if (!text || loading) return;
+
+        const next: ChatMessage[] = [...messages, { role: 'user', content: text }];
+        setMessages(next);
+        setInput('');
+        setLoading(true);
+
+        try {
+            const res = await fetch('/api/nim/coach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: next }),
+            });
+            const { reply } = await res.json() as { reply: string };
+            setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+        } catch {
+            setMessages(prev => [...prev, { role: 'assistant', content: 'Something went wrong — try again.' }]);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ duration: 0.2 }}
+                        className="w-[min(400px,calc(100vw-3rem))] h-[560px] max-h-[calc(100vh-6rem)] backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl flex flex-col overflow-hidden shadow-2xl shadow-black/40"
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08]">
+                            <span className="font-serif italic font-bold text-violet-300 text-sm tracking-wide">AXIOM Coach</span>
+                            <button
+                                type="button"
+                                onClick={() => setOpen(false)}
+                                aria-label="Close chat"
+                                className="text-zinc-500 hover:text-zinc-200 transition-colors text-lg leading-none"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                            {messages.length === 0 && !loading && (
+                                <p className="text-zinc-500 italic text-sm text-center mt-8">
+                                    Ask your coach anything — it can see your tasks, habits, finances, and goals.
+                                </p>
+                            )}
+                            {messages.map((msg, i) =>
+                                msg.role === 'user' ? (
+                                    <div key={i} className="flex justify-end">
+                                        <span className="bg-white/[0.06] rounded-2xl rounded-br-sm px-4 py-2 text-zinc-50 text-sm max-w-[85%]">
+                                            {msg.content}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div key={i} className="flex justify-start">
+                                        <span className="bg-violet-500/10 border border-violet-500/20 rounded-2xl rounded-bl-sm px-4 py-2 text-zinc-50 text-sm max-w-[85%]">
+                                            {msg.content}
+                                        </span>
+                                    </div>
+                                )
+                            )}
+                            {loading && (
+                                <div className="flex justify-start">
+                                    <span className="text-violet-400 italic text-sm animate-pulse px-1">Thinking…</span>
+                                </div>
+                            )}
+                            <div ref={bottomRef} />
+                        </div>
+
+                        {/* Input */}
+                        <form onSubmit={handleSubmit} className="border-t border-white/[0.08] p-3 flex gap-2">
+                            <input
+                                type="text"
+                                value={input}
+                                onChange={e => setInput(e.target.value)}
+                                aria-label="Chat message"
+                                placeholder="Ask your coach…"
+                                className="flex-1 bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-zinc-50 text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                            />
+                            <button
+                                type="submit"
+                                disabled={loading || !input.trim()}
+                                className="px-3 py-2 rounded-xl bg-violet-500/20 border border-violet-500/40 text-violet-300 text-sm hover:bg-violet-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                ↑
+                            </button>
+                        </form>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Toggle button */}
+            <button
+                type="button"
+                onClick={() => setOpen(v => !v)}
+                aria-label="Open coach chat"
+                className="h-14 w-14 rounded-full bg-violet-500/20 border border-violet-500/40 backdrop-blur-xl text-violet-300 shadow-lg shadow-violet-500/20 hover:bg-violet-500/30 transition-colors flex items-center justify-center text-xl"
+            >
+                ✦
+            </button>
+        </div>
+    );
+}
