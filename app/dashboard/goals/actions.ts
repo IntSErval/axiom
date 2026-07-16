@@ -55,7 +55,7 @@ export async function updateGoal(formData: FormData) {
 }
 
 export async function updateGoalProgress(goalId: string, current_amount: number) {
-    if (isNaN(current_amount)) throw new Error("Invalid amount");
+    if (isNaN(current_amount) || current_amount < 0) throw new Error("Invalid amount");
     const { supabase, user } = await getUser();
     const { error } = await supabase.from("goals").update({ current_amount }).eq("id", goalId).eq("user_id", user.id);
     if (error) throw new Error(error.message);

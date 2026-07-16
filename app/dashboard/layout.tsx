@@ -19,8 +19,9 @@ const TABS = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const isHome = pathname === '/dashboard';
     return (
-        <div className="min-h-screen w-full bg-[#080810]">
+        <div className="min-h-screen w-full">
             <header className="sticky top-0 z-20 mx-auto max-w-3xl pt-6 px-6">
                 <GlassPanel className="px-2 py-2 flex items-center gap-1">
                     {TABS.map((t) => {
@@ -36,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     })}
                 </GlassPanel>
             </header>
-            <div className="mx-auto max-w-3xl px-6">
+            <div className={cn('mx-auto px-6', isHome ? 'max-w-[1400px]' : 'max-w-3xl')}>
                 <AnimatePresence mode="wait">
                     <motion.div key={pathname} {...fadeSlideUp}>
                         {children}

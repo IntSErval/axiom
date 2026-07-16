@@ -19,11 +19,13 @@ export async function createHabit(formData: FormData) {
     if (!user) throw new Error("Not authenticated");
     const name = formData.get("name") as string;
     if (!name) throw new Error("name required");
+    const target = Number(formData.get("target") ?? 1);
+    if (isNaN(target) || target < 1) throw new Error("Target must be a positive number");
     await supabase.from("habits").insert({
         user_id: user.id,
         name,
         frequency: formData.get("frequency") as string,
-        target: Number(formData.get("target") ?? 1),
+        target,
     });
     revalidatePath("/dashboard/habits");
 }
@@ -34,10 +36,12 @@ export async function updateHabit(formData: FormData) {
     if (!user) throw new Error("Not authenticated");
     const name = formData.get("name") as string;
     if (!name) throw new Error("name required");
+    const target = Number(formData.get("target") ?? 1);
+    if (isNaN(target) || target < 1) throw new Error("Target must be a positive number");
     await supabase.from("habits").update({
         name,
         frequency: formData.get("frequency") as string,
-        target: Number(formData.get("target") ?? 1),
+        target,
     }).eq("id", formData.get("id") as string).eq("user_id", user.id);
     revalidatePath("/dashboard/habits");
 }

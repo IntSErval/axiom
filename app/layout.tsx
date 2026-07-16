@@ -26,8 +26,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen bg-[#080810] text-zinc-50 antialiased">
-        {children}
+      <body className="min-h-screen bg-[#07080d] text-zinc-50 antialiased">
+        <div aria-hidden className="bubble bubble-a" />
+        <div aria-hidden className="bubble bubble-b" />
+        <div className="relative z-[1]">{children}</div>
         <GlowCursor />
       </body>
     </html>

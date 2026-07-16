@@ -20,13 +20,17 @@ export async function createTask(formData: FormData) {
 
 export async function updateTaskStatus(taskId: string, status: string) {
     const supabase = await supabaseServer();
-    await supabase.from("tasks").update({ status }).eq("id", taskId);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    await supabase.from("tasks").update({ status }).eq("id", taskId).eq("user_id", user.id);
     revalidatePath("/dashboard/tasks");
 }
 
 export async function reorderTask(taskId: string, project_id: string | null) {
     const supabase = await supabaseServer();
-    await supabase.from("tasks").update({ project_id }).eq("id", taskId);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    await supabase.from("tasks").update({ project_id }).eq("id", taskId).eq("user_id", user.id);
     revalidatePath("/dashboard/tasks");
 }
 
@@ -42,7 +46,7 @@ export async function updateTask(formData: FormData) {
         priority: Number(formData.get("priority")),
         project_id: (formData.get("project_id") as string) || null,
         due_date: (formData.get("due_date") as string) || null,
-    }).eq("id", id);
+    }).eq("id", id).eq("user_id", user.id);
     revalidatePath("/dashboard/tasks");
 }
 
@@ -61,6 +65,8 @@ export async function createProject(formData: FormData) {
 
 export async function deleteTask(taskId: string) {
     const supabase = await supabaseServer();
-    await supabase.from("tasks").delete().eq("id", taskId);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    await supabase.from("tasks").delete().eq("id", taskId).eq("user_id", user.id);
     revalidatePath("/dashboard/tasks");
 }

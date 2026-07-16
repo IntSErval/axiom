@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #080810;
-  --color-surface: rgba(255, 255, 255, 0.03);
-  --color-border-glass: rgba(255, 255, 255, 0.08);
+  --color-background: #07080d;
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-border-glass: rgba(255, 255, 255, 0.1);
 
-  --color-accent-primary: #3b82f6;
-  --color-accent-secondary: #8b5cf6;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
+  --color-accent-primary: #8da6ff;
+  --color-accent-secondary: #a78bfa;
+  --color-accent-teal: #4fd8c8;
+  --color-success: #5fd9a4;
+  --color-warning: #f0c878;
 
-  --color-text-primary: #fafafa;
-  --color-text-muted: #71717a;
+  --color-text-primary: rgba(255, 255, 255, 0.92);
+  --color-text-muted: rgba(255, 255, 255, 0.45);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -26,4 +27,111 @@
   html {
     @apply font-sans;
   }
+
+  ::selection {
+    background: rgba(120, 160, 255, 0.3);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: rgba(255, 255, 255, 0.28);
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  /* Liquid glass card — imported from the Productivity Dashboard claude.ai/design project */
+  .glass {
+    position: relative;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(28px) saturate(170%);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 0 30px rgba(255, 255, 255, 0.025),
+      0 26px 60px rgba(0, 0, 0, 0.5);
+  }
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(125deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 32%);
+    pointer-events: none;
+  }
+
+  /* Ambient background bubbles */
+  .bubble {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .bubble-a {
+    top: -20%;
+    right: -14%;
+    width: 58vw;
+    height: 58vw;
+    background: radial-gradient(circle at 38% 38%, rgba(72, 132, 255, 0.5), rgba(142, 72, 255, 0.22) 55%, rgba(0, 0, 0, 0) 72%);
+    animation: bubbleA 30s ease-in-out infinite alternate, hueA 24s linear infinite;
+  }
+  .bubble-b {
+    bottom: -24%;
+    left: -16%;
+    width: 66vw;
+    height: 66vw;
+    background: radial-gradient(circle at 60% 45%, rgba(70, 210, 220, 0.4), rgba(100, 80, 255, 0.2) 55%, rgba(0, 0, 0, 0) 72%);
+    animation: bubbleB 36s ease-in-out infinite alternate, hueB 30s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bubble-a,
+    .bubble-b {
+      animation: none;
+      filter: blur(100px);
+    }
+  }
+
+  /* Bento tilt: dim + blur siblings of the hovered card */
+  @media (hover: hover) and (pointer: fine) {
+    .bento:has([data-tilt]:hover) [data-tilt]:not(:hover) {
+      filter: blur(2.5px) saturate(0.85);
+      opacity: 0.72;
+    }
+  }
+  .bento [data-tilt] {
+    transition: filter 0.5s ease, opacity 0.5s ease;
+  }
+}
+
+@keyframes bubbleA {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-7vw, 6vh) scale(1.14); }
+  100% { transform: translate(4vw, -4vh) scale(0.94); }
+}
+@keyframes bubbleB {
+  0% { transform: translate(0, 0) scale(1.06); }
+  50% { transform: translate(6vw, -5vh) scale(0.92); }
+  100% { transform: translate(-3vw, 4vh) scale(1.12); }
+}
+@keyframes hueA {
+  0% { filter: blur(95px) hue-rotate(-45deg); }
+  50% { filter: blur(95px) hue-rotate(65deg); }
+  100% { filter: blur(95px) hue-rotate(-45deg); }
+}
+@keyframes hueB {
+  0% { filter: blur(110px) hue-rotate(60deg); }
+  50% { filter: blur(110px) hue-rotate(-40deg); }
+  100% { filter: blur(110px) hue-rotate(60deg); }
 }
