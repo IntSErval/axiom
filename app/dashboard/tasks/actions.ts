@@ -10,6 +10,7 @@ export async function createTask(formData: FormData) {
     await supabase.from("tasks").insert({
         user_id: user.id,
         title: formData.get("title") as string,
+        description: (formData.get("description") as string) || null,
         priority: Number(formData.get("priority")),
         project_id: (formData.get("project_id") as string) || null,
         due_date: (formData.get("due_date") as string) || null,

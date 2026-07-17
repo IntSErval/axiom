@@ -1,7 +1,7 @@
 ﻿"use client";
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core";
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -13,6 +13,8 @@ function arrayMove<T>(array: T[], from: number, to: number): T[] {
 }
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { WheelDatePicker, WheelSelect } from "@/components/ui/WheelDatePicker";
 import { updateTaskStatus, deleteTask, createTask, updateTask, createProject } from "@/app/dashboard/tasks/actions";
 import type { Task, Project } from "@/lib/database";
 
@@ -21,6 +23,13 @@ const PRIORITY_COLOR: Record<number, string> = {
     2: "text-blue-400 border-blue-400/30",
     3: "text-amber-400 border-amber-400/30",
     4: "text-zinc-500 border-zinc-500/30",
+};
+
+const PRIORITY_SEGMENT: Record<number, string> = {
+    1: "bg-violet-400/15 text-violet-300",
+    2: "bg-blue-400/15 text-blue-300",
+    3: "bg-amber-400/15 text-amber-300",
+    4: "bg-white/[0.08] text-zinc-300",
 };
 
 const ALERT = "text-rose-400";
@@ -155,40 +164,37 @@ function TaskForm({
                     placeholder="Optional description"
                 />
             </div>
+            <div>
+                <label className="block text-sm text-zinc-500 mb-1">Priority</label>
+                <div className="grid grid-cols-4 gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
+                    {([1, 2, 3, 4] as const).map((p) => (
+                        <button
+                            type="button"
+                            key={p}
+                            onClick={() => setData({ ...data, priority: p })}
+                            className={`rounded-lg py-1.5 text-sm transition-[color,background-color,transform] duration-150 active:scale-[0.97] ${
+                                data.priority === p ? PRIORITY_SEGMENT[p] : "text-white/40 hover:text-white/80"
+                            }`}
+                        >
+                            P{p}
+                        </button>
+                    ))}
+                </div>
+            </div>
             <div className="flex gap-3">
                 <div className="flex-1">
-                    <label className="block text-sm text-zinc-500 mb-1">Priority</label>
-                    <select
-                        value={data.priority}
-                        onChange={(e) => setData({ ...data, priority: Number(e.target.value) })}
-                        className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] text-zinc-50 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                        <option value={1}>P1</option>
-                        <option value={2}>P2</option>
-                        <option value={3}>P3</option>
-                        <option value={4}>P4</option>
-                    </select>
-                </div>
-                <div className="flex-1">
                     <label className="block text-sm text-zinc-500 mb-1">Project</label>
-                    <select
+                    <WheelSelect
+                        options={[{ value: "", label: "None" }, ...projects.map((p) => ({ value: p.id, label: p.name }))]}
                         value={data.project_id || ""}
-                        onChange={(e) => setData({ ...data, project_id: e.target.value })}
-                        className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] text-zinc-50 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                        <option value="">None</option>
-                        {projects.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                    </select>
+                        onChange={(v) => setData({ ...data, project_id: v })}
+                    />
                 </div>
                 <div className="flex-1">
                     <label className="block text-sm text-zinc-500 mb-1">Due Date</label>
-                    <input
-                        type="date"
+                    <WheelDatePicker
                         value={data.due_date}
-                        onChange={(e) => setData({ ...data, due_date: e.target.value })}
-                        className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] text-zinc-50 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        onChange={(v) => setData({ ...data, due_date: v })}
                     />
                 </div>
             </div>
@@ -276,6 +282,15 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
     const [projectModalOpen, setProjectModalOpen] = useState(false);
     const [insight, setInsight] = useState<string | null>(null);
 
+    // Require 8px of movement before a drag starts, so clicks on the row's
+    // checkbox/edit/delete buttons aren't swallowed by dnd-kit's listeners.
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+    // Re-sync after server actions revalidate (create/edit land in initialTasks)
+    useEffect(() => {
+        setTasks(initialTasks);
+    }, [initialTasks]);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         fetch("/api/nim/task-agent", {
@@ -310,10 +325,10 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
         setEditing(null);
     }, []);
 
-    const onDeleteTask = useCallback(async (id: string) => {
-        if (!window.confirm("Are you sure you want to delete this task?")) return;
-        await deleteTask(id);
-        setTasks((prev) => prev.filter((t) => t.id !== id));
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+    const onDeleteTask = useCallback((id: string) => {
+        setConfirmDeleteId(id);
     }, []);
 
     const onCreateProject = useCallback(async (fd: FormData) => {
@@ -322,47 +337,54 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
     }, []);
 
     const renderTasks = () => {
-        if (tasks.length === 0) {
+        if (tasks.length === 0 && projects.length === 0) {
             return (
                 <div className="text-zinc-500 text-center py-12 italic">
                     No tasks yet. Add your first task to get started.
                 </div>
             );
         }
-        // Render flat list with project section headers
-        const result: React.ReactNode[] = [];
-        let lastProjectId: string | null = "__init__";
-        for (const task of tasks) {
-            if (task.project_id !== lastProjectId) {
-                const proj = projects.find((p) => p.id === task.project_id);
-                result.push(
-                    <div key={task.project_id ?? "uncategorized"} className="flex items-center gap-2 mb-2 mt-4 first:mt-0">
-                        {proj && (
-                            <span
-                                className="inline-block w-3 h-3 rounded-full shrink-0"
-                                style={{ backgroundColor: proj.color }}
-                            />
-                        )}
-                        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
-                            {proj ? proj.name : "Uncategorized"}
-                        </h3>
-                    </div>
-                );
-                lastProjectId = task.project_id;
-            }
-            result.push(
-                <TaskRow
-                    key={task.id}
-                    task={task}
-                    onEdit={(t) => {
-                        setEditing(t);
-                        setModalOpen(true);
-                    }}
-                    onDelete={onDeleteTask}
-                />
-            );
-        }
-        return result;
+        // One section per project (even when empty, so a new project is visible),
+        // then an Uncategorized section for the rest.
+        const groups: { key: string; proj: Project | null; items: Task[] }[] = projects.map((p) => ({
+            key: p.id,
+            proj: p,
+            items: tasks.filter((t) => t.project_id === p.id),
+        }));
+        const uncategorized = tasks.filter((t) => !t.project_id || !projects.some((p) => p.id === t.project_id));
+        if (uncategorized.length > 0) groups.push({ key: "uncategorized", proj: null, items: uncategorized });
+
+        return groups.map(({ key, proj, items }) => (
+            <div key={key}>
+                <div className="flex items-center gap-2 mb-2 mt-4 first:mt-0">
+                    {proj && (
+                        <span
+                            className="inline-block w-3 h-3 rounded-full shrink-0"
+                            style={{ backgroundColor: proj.color }}
+                        />
+                    )}
+                    <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
+                        {proj ? proj.name : "Uncategorized"}
+                    </h3>
+                    <span className="text-xs text-zinc-600">{items.length}</span>
+                </div>
+                {items.length === 0 ? (
+                    <p className="text-sm text-zinc-600 italic mb-2">No tasks yet</p>
+                ) : (
+                    items.map((task) => (
+                        <TaskRow
+                            key={task.id}
+                            task={task}
+                            onEdit={(t) => {
+                                setEditing(t);
+                                setModalOpen(true);
+                            }}
+                            onDelete={onDeleteTask}
+                        />
+                    ))
+                )}
+            </div>
+        ));
     };
 
     return (
@@ -394,7 +416,7 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
                     </span>
                 </div>
             )}
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {renderTasks()}
                 </SortableContext>
@@ -421,6 +443,17 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
             <GlassModal open={projectModalOpen} onOpenChange={setProjectModalOpen} title="New Project">
                 <ProjectForm onSubmit={onCreateProject} />
             </GlassModal>
+            <ConfirmModal
+                open={confirmDeleteId !== null}
+                onOpenChange={(v) => { if (!v) setConfirmDeleteId(null); }}
+                title="Delete Task"
+                message="This task will be permanently deleted. This can't be undone."
+                onConfirm={async () => {
+                    if (!confirmDeleteId) return;
+                    await deleteTask(confirmDeleteId);
+                    setTasks((prev) => prev.filter((t) => t.id !== confirmDeleteId));
+                }}
+            />
         </div>
     );
 }

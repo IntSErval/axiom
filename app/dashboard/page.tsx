@@ -26,7 +26,8 @@ export default async function DashboardHomePage() {
             .from("tasks")
             .select("id,title,priority,status,due_date")
             .eq("user_id", uid)
-            .neq("status", "done")
+            // keep done tasks visible (crossed out) — sorted last: todo > in_progress > done
+            .order("status", { ascending: false })
             .order("priority", { ascending: true })
             .limit(10),
         supabase.from("habits").select("id,name").eq("user_id", uid),
