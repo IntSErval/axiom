@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { GlassPanel } from '@/components/ui/GlassPanel';
 import { ChatPanel } from '@/components/agents/ChatPanel';
 import { InsightStack } from '@/components/dashboard/InsightStack';
 import { fadeSlideUp } from '@/lib/motin';
@@ -22,20 +21,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const isHome = pathname === '/dashboard';
     return (
         <div className="min-h-screen w-full">
-            <header className="sticky top-0 z-20 mx-auto max-w-3xl pt-6 px-6">
-                <GlassPanel className="px-2 py-2 flex items-center gap-1">
+            <header className={cn('sticky top-0 z-20 mx-auto pt-6 px-6 flex items-center gap-3', isHome ? 'max-w-[1400px]' : 'max-w-3xl')}>
+                <div className="glass rounded-full px-4 py-2 text-sm font-bold italic tracking-wide text-zinc-50 select-none">
+                    AXIOM
+                </div>
+                <nav className="flex items-center gap-2">
                     {TABS.map((t) => {
                         const active = t.exact ? pathname === t.href : pathname?.startsWith(t.href);
                         return (
                             <Link key={t.href} href={t.href} className={cn(
-                                'rounded-xl px-3 py-1.5 text-sm transition-colors',
-                                active ? 'bg-white/[0.08] text-zinc-50' : 'text-zinc-500 hover:text-zinc-50 hover:bg-white/[0.04]'
+                                'glass rounded-full px-4 py-2 text-sm transition-[color,background-color,transform] duration-200 active:scale-[0.97]',
+                                active ? 'bg-white/[0.10] text-zinc-50' : 'text-white/45 hover:text-zinc-50'
                             )}>
                                 {t.label}
                             </Link>
                         );
                     })}
-                </GlassPanel>
+                </nav>
             </header>
             <div className={cn('mx-auto px-6', isHome ? 'max-w-[1400px]' : 'max-w-3xl')}>
                 <AnimatePresence mode="wait">
