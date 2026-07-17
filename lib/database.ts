@@ -12,5 +12,6 @@ export interface HabitLog { id: string; habit_id: string; completed_at: string; 
 export interface Account  { id: string; user_id: string; name: string; type: AccountType; balance: number; created_at: string }
 export interface Transaction { id: string; user_id: string; account_id: string; amount: number; category: string; description: string | null; date: string }
 export interface Budget   { id: string; user_id: string; category: string; limit_amount: number; period: BudgetPeriod; created_at: string }
-export interface Goal     { id: string; user_id: string; title: string; target_amount: number; current_amount: number; deadline: string | null; status: GoalStatus; created_at: string }
+export interface Goal     { id: string; user_id: string; title: string; target_amount: number; current_amount: number; deadline: string | null; status: GoalStatus; created_at: string; habit_id: string | null; category: string | null; completed_at: string | null }
 export interface Milestone{ id: string; goal_id: string; title: string; target_amount: number; status: MilestoneStatus; due_date: string | null }
+export interface GoalCheckin { id: string; goal_id: string; amount: number; created_at: string }
