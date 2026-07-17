@@ -1,6 +1,6 @@
 import { callNim } from "@/lib/nim";
 
-const MODEL = "nvidia/llama-3.1-nemotron-70b-instruct";
+const MODEL = "nvidia/llama-3.3-nemotron-super-49b-v1.5";
 
 export interface ChatMessage {
     role: "user" | "assistant";
