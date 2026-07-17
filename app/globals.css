@@ -26,6 +26,13 @@
 
   html {
     @apply font-sans;
+    color-scheme: dark;
+  }
+
+  /* Native select dropdowns render white without an explicit dark option bg */
+  select option {
+    background-color: #12141c;
+    color: rgba(255, 255, 255, 0.92);
   }
 
   ::selection {
@@ -100,6 +107,29 @@
     .bubble-b {
       animation: none;
       filter: blur(100px);
+    }
+  }
+
+  /* Wheel date picker columns (WheelDatePicker.tsx) */
+  .wheel-col {
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+  }
+  .wheel-col::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Liquid envelope fill (finance budget categories) */
+  .liquid-wave {
+    animation: liquid-drift 3.4s linear infinite;
+  }
+  .liquid-wave-2 {
+    animation: liquid-drift 5.2s linear infinite reverse;
+  }
+  @keyframes liquid-drift {
+    to {
+      transform: translateX(-40px);
     }
   }
 
