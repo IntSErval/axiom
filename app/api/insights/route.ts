@@ -66,7 +66,7 @@ export async function GET() {
 
         const insights: Insight[] = [];
 
-        // 1. tasks-overdue
+        // tasks-overdue
         const overdue = openTasks.filter((t) => t.due_date && t.due_date < today);
         if (overdue.length > 0) {
             insights.push({
@@ -75,7 +75,7 @@ export async function GET() {
                 message: `${overdue.length} task${overdue.length > 1 ? "s" : ""} overdue — knock out the oldest one first`,
             });
         } else {
-            // 2. tasks-p1 (only if overdue didn't fire)
+            // tasks-p1 (only if overdue didn't fire)
             const p1 = openTasks.filter((t) => t.priority === 1);
             if (p1.length > 0) {
                 insights.push({
@@ -86,11 +86,12 @@ export async function GET() {
             }
         }
 
-        // 3. habits-cold (suppressed by habits-tasks-dip when tasks are also overdue)
+        // habits-cold / habits-tasks-dip (dip suppresses cold when tasks are also overdue)
         const loggedHabitIds = new Set(habitLogs.map((l) => l.habit_id));
-        const coldHabit = habits.find((h) => !loggedHabitIds.has(h.id));
+        const coldHabits = habits.filter((h) => !loggedHabitIds.has(h.id));
+        const coldHabit = coldHabits[0];
         if (coldHabit && overdue.length > 0) {
-            // 6. habits-tasks-dip (cross-domain: cold habit + overdue tasks)
+            // habits-tasks-dip (cross-domain: cold habit + overdue tasks)
             insights.push({
                 id: "habits-tasks-dip",
                 domain: "habits",
@@ -104,7 +105,7 @@ export async function GET() {
             });
         }
 
-        // 4. finance-over-budget (first only, suppressed by finance-goal-drag when it drags an active goal)
+        // finance-over-budget / finance-goal-drag (drag suppresses over-budget when the category feeds an active goal; first over-budget category only)
         if (budgets.length > 0) {
             // Sum absolute negative amounts per category
             const spendByCategory: Record<string, number> = {};
@@ -121,7 +122,7 @@ export async function GET() {
                 ? activeGoals.find((g) => g.category === overBudget.category)
                 : undefined;
             if (overBudget && draggedGoal) {
-                // 7. finance-goal-drag (cross-domain: over-budget category feeds an active goal)
+                // finance-goal-drag (cross-domain: over-budget category feeds an active goal)
                 insights.push({
                     id: "finance-goal-drag",
                     domain: "finance",
@@ -136,7 +137,7 @@ export async function GET() {
             }
         }
 
-        // 5. coach-weekly (Mondays only)
+        // coach-weekly (Mondays only)
         if (new Date().getDay() === 1) {
             insights.push({
                 id: "coach-weekly",
@@ -145,10 +146,10 @@ export async function GET() {
             });
         }
 
-        // 8. goal-habit-cold (cross-domain: active goal linked to a habit gone cold)
-        const coldHabitIds = new Set(
-            habits.filter((h) => !loggedHabitIds.has(h.id)).map((h) => h.id)
-        );
+        // goal-habit-cold (cross-domain: active goal linked to a habit gone cold)
+        // Intentionally coexists with habits-tasks-dip/habits-cold — the same habit may
+        // surface in both a habits-domain card and this coach-domain card.
+        const coldHabitIds = new Set(coldHabits.map((h) => h.id));
         const draggedGoalHabit = activeGoals.find(
             (g) => g.habit_id && coldHabitIds.has(g.habit_id)
         );
