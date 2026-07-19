@@ -22,8 +22,8 @@ ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "tasks owner all"
   ON public.tasks
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- projects
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
@@ -31,8 +31,8 @@ ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "projects owner all"
   ON public.projects
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- habits
 ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
@@ -40,8 +40,8 @@ ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "habits owner all"
   ON public.habits
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- accounts
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
@@ -49,8 +49,8 @@ ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "accounts owner all"
   ON public.accounts
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- transactions
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
@@ -58,8 +58,8 @@ ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "transactions owner all"
   ON public.transactions
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- budgets
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
@@ -67,8 +67,8 @@ ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "budgets owner all"
   ON public.budgets
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- goals
 ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
@@ -76,8 +76,8 @@ ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "goals owner all"
   ON public.goals
   FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (user_id = (SELECT auth.uid()))
+  WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- ============================================================================
 -- Child tables WITHOUT user_id (accessed via parent foreign key)
