@@ -14,12 +14,35 @@ export function ChatPanel() {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
+    const openerFetched = useRef(false);
 
     useEffect(() => {
         if (bottomRef.current) {
             bottomRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [messages, loading]);
+
+    useEffect(() => {
+        if (!open || messages.length > 0 || openerFetched.current) return;
+        openerFetched.current = true;
+        setLoading(true);
+
+        (async () => {
+            try {
+                const res = await fetch('/api/nim/coach', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: [] }),
+                });
+                const { reply } = await res.json() as { reply: string };
+                setMessages(prev => (prev.length > 0 ? prev : [{ role: 'assistant', content: reply }]));
+            } catch {
+                // ponytail: opener is a nicety — silently skip on failure, the empty-state copy still shows
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [open, messages.length]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
