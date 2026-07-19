@@ -20,7 +20,7 @@ export async function GET() {
         const monthStart = today.slice(0, 7) + "-01";
         const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
-        const [tasksRes, habitsRes, transactionsRes, budgetsRes] = await Promise.all([
+        const [tasksRes, habitsRes, transactionsRes, budgetsRes, goalsRes] = await Promise.all([
             supabase
                 .from("tasks")
                 .select("id, due_date, status, priority")
@@ -39,12 +39,18 @@ export async function GET() {
                 .from("budgets")
                 .select("category, limit_amount")
                 .eq("user_id", user.id),
+            supabase
+                .from("goals")
+                .select("title, habit_id, category")
+                .eq("user_id", user.id)
+                .eq("status", "active"),
         ]);
 
         const openTasks = tasksRes.data ?? [];
         const habits = habitsRes.data ?? [];
         const transactions = transactionsRes.data ?? [];
         const budgets = budgetsRes.data ?? [];
+        const activeGoals = goalsRes.data ?? [];
 
         // Habit logs — only fetch if there are habits
         let habitLogs: { habit_id: string }[] = [];
@@ -80,10 +86,17 @@ export async function GET() {
             }
         }
 
-        // 3. habits-cold
+        // 3. habits-cold (suppressed by habits-tasks-dip when tasks are also overdue)
         const loggedHabitIds = new Set(habitLogs.map((l) => l.habit_id));
         const coldHabit = habits.find((h) => !loggedHabitIds.has(h.id));
-        if (coldHabit) {
+        if (coldHabit && overdue.length > 0) {
+            // 6. habits-tasks-dip (cross-domain: cold habit + overdue tasks)
+            insights.push({
+                id: "habits-tasks-dip",
+                domain: "habits",
+                message: `Consistency is dipping — '${coldHabit.name}' has gone quiet and ${overdue.length} task${overdue.length > 1 ? "s" : ""} ${overdue.length > 1 ? "are" : "is"} overdue`,
+            });
+        } else if (coldHabit) {
             insights.push({
                 id: "habits-cold",
                 domain: "habits",
@@ -91,7 +104,7 @@ export async function GET() {
             });
         }
 
-        // 4. finance-over-budget (first only)
+        // 4. finance-over-budget (first only, suppressed by finance-goal-drag when it drags an active goal)
         if (budgets.length > 0) {
             // Sum absolute negative amounts per category
             const spendByCategory: Record<string, number> = {};
@@ -104,7 +117,17 @@ export async function GET() {
             const overBudget = budgets.find(
                 (b) => (spendByCategory[b.category] ?? 0) > b.limit_amount
             );
-            if (overBudget) {
+            const draggedGoal = overBudget
+                ? activeGoals.find((g) => g.category === overBudget.category)
+                : undefined;
+            if (overBudget && draggedGoal) {
+                // 7. finance-goal-drag (cross-domain: over-budget category feeds an active goal)
+                insights.push({
+                    id: "finance-goal-drag",
+                    domain: "finance",
+                    message: `'${overBudget.category}' is over budget — that's slowing your '${draggedGoal.title}' goal`,
+                });
+            } else if (overBudget) {
                 insights.push({
                     id: "finance-over-budget",
                     domain: "finance",
@@ -119,6 +142,22 @@ export async function GET() {
                 id: "coach-weekly",
                 domain: "coach",
                 message: "Weekly review ready — open the coach to reflect on last week",
+            });
+        }
+
+        // 8. goal-habit-cold (cross-domain: active goal linked to a habit gone cold)
+        const coldHabitIds = new Set(
+            habits.filter((h) => !loggedHabitIds.has(h.id)).map((h) => h.id)
+        );
+        const draggedGoalHabit = activeGoals.find(
+            (g) => g.habit_id && coldHabitIds.has(g.habit_id)
+        );
+        if (draggedGoalHabit) {
+            const linkedHabit = habits.find((h) => h.id === draggedGoalHabit.habit_id);
+            insights.push({
+                id: "goal-habit-cold",
+                domain: "coach",
+                message: `'${draggedGoalHabit.title}' depends on '${linkedHabit?.name}', which has gone quiet this week`,
             });
         }
 
