@@ -5,6 +5,8 @@ interface Insight {
     id: string;
     domain: "tasks" | "habits" | "finance" | "coach";
     message: string;
+    href?: string;
+    action?: "open-coach";
 }
 
 export async function GET() {
@@ -73,6 +75,7 @@ export async function GET() {
                 id: "tasks-overdue",
                 domain: "tasks",
                 message: `${overdue.length} task${overdue.length > 1 ? "s" : ""} overdue — knock out the oldest one first`,
+                href: "/dashboard/tasks",
             });
         } else {
             // tasks-p1 (only if overdue didn't fire)
@@ -82,6 +85,7 @@ export async function GET() {
                     id: "tasks-p1",
                     domain: "tasks",
                     message: `You have ${p1.length} P1 task${p1.length > 1 ? "s" : ""} waiting`,
+                    href: "/dashboard/tasks",
                 });
             }
         }
@@ -96,12 +100,14 @@ export async function GET() {
                 id: "habits-tasks-dip",
                 domain: "habits",
                 message: `Consistency is dipping — '${coldHabit.name}' has gone quiet and ${overdue.length} task${overdue.length > 1 ? "s" : ""} ${overdue.length > 1 ? "are" : "is"} overdue`,
+                href: "/dashboard/habits",
             });
         } else if (coldHabit) {
             insights.push({
                 id: "habits-cold",
                 domain: "habits",
                 message: `'${coldHabit.name}' has gone quiet — 7+ days without a log`,
+                href: "/dashboard/habits",
             });
         }
 
@@ -127,12 +133,14 @@ export async function GET() {
                     id: "finance-goal-drag",
                     domain: "finance",
                     message: `'${overBudget.category}' is over budget — that's slowing your '${draggedGoal.title}' goal`,
+                    href: "/dashboard/finance",
                 });
             } else if (overBudget) {
                 insights.push({
                     id: "finance-over-budget",
                     domain: "finance",
                     message: `'${overBudget.category}' is over budget this month`,
+                    href: "/dashboard/finance",
                 });
             }
         }
@@ -143,6 +151,7 @@ export async function GET() {
                 id: "coach-weekly",
                 domain: "coach",
                 message: "Weekly review ready — open the coach to reflect on last week",
+                action: "open-coach",
             });
         }
 
@@ -159,6 +168,7 @@ export async function GET() {
                 id: "goal-habit-cold",
                 domain: "coach",
                 message: `'${draggedGoalHabit.title}' depends on '${linkedHabit?.name}', which has gone quiet this week`,
+                action: "open-coach",
             });
         }
 

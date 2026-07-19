@@ -23,6 +23,12 @@ export function ChatPanel() {
     }, [messages, loading]);
 
     useEffect(() => {
+        const openCoach = () => setOpen(true);
+        window.addEventListener('axiom:open-coach', openCoach);
+        return () => window.removeEventListener('axiom:open-coach', openCoach);
+    }, []);
+
+    useEffect(() => {
         if (!open || messages.length > 0 || openerFetched.current) return;
         openerFetched.current = true;
         setLoading(true);

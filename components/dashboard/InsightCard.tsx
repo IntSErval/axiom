@@ -1,9 +1,13 @@
 'use client';
 
+import Link from 'next/link';
+
 export interface Insight {
     id: string;
     domain: "tasks" | "habits" | "finance" | "coach";
     message: string;
+    href?: string;
+    action?: "open-coach";
 }
 
 const DOMAIN_COLOR: Record<Insight["domain"], string> = {
@@ -38,6 +42,25 @@ export function InsightCard({ insight, onDismiss, onSnooze }: Props) {
             </span>
 
             <p className="text-sm text-zinc-50 mt-1 pr-5">{insight.message}</p>
+
+            {insight.href && (
+                <Link
+                    href={insight.href}
+                    className={`inline-block text-xs font-medium mt-2 hover:underline ${DOMAIN_COLOR[insight.domain]}`}
+                >
+                    View →
+                </Link>
+            )}
+
+            {insight.action === 'open-coach' && (
+                <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event('axiom:open-coach'))}
+                    className={`block text-xs font-medium mt-2 hover:underline ${DOMAIN_COLOR[insight.domain]}`}
+                >
+                    Open coach →
+                </button>
+            )}
 
             <div className="flex gap-3 mt-3">
                 {(Object.keys(SNOOZE_MS) as (keyof typeof SNOOZE_MS)[]).map((label) => (
