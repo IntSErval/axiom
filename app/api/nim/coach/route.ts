@@ -17,11 +17,11 @@ export async function POST(req: NextRequest) {
 
         const [{ data: tasks }, { data: habits }, { data: accounts }, { data: goals }, { data: transactions }, { data: budgets }] = await Promise.all([
             supabase.from("tasks").select("title,priority,status,due_date").eq("user_id", user.id).neq("status", "done").order("priority").limit(10),
-            supabase.from("habits").select("id,name,streak").eq("user_id", user.id),
-            supabase.from("accounts").select("name,balance").eq("user_id", user.id),
-            supabase.from("goals").select("title,target_amount,current_amount,deadline").eq("user_id", user.id).eq("status", "active"),
+            supabase.from("habits").select("id,name,streak").eq("user_id", user.id).limit(20),
+            supabase.from("accounts").select("name,balance").eq("user_id", user.id).limit(20),
+            supabase.from("goals").select("title,target_amount,current_amount,deadline").eq("user_id", user.id).eq("status", "active").limit(20),
             supabase.from("transactions").select("amount,category,date").eq("user_id", user.id).gte("date", txnSince),
-            supabase.from("budgets").select("category,limit_amount").eq("user_id", user.id),
+            supabase.from("budgets").select("category,limit_amount").eq("user_id", user.id).limit(20),
         ]);
 
         const openTasks = tasks ?? [];
@@ -52,7 +52,8 @@ export async function POST(req: NextRequest) {
             if (tx.date >= monthStart) spendMTD[tx.category] = (spendMTD[tx.category] ?? 0) + amt;
         }
         const spendSummary = Object.keys(spend30).length > 0
-            ? Object.entries(spend30).map(([cat, amt]) => `${cat}: $${amt.toFixed(2)}`).join(", ")
+            ? Object.entries(spend30).sort((a, b) => b[1] - a[1]).slice(0, 10)
+                .map(([cat, amt]) => `${cat}: $${amt.toFixed(2)}`).join(", ")
             : "No spending recorded";
 
         const budgetSummary = (budgets ?? []).length > 0
@@ -62,8 +63,8 @@ export async function POST(req: NextRequest) {
         const goalSummary = (goals ?? []).length > 0
             ? (goals ?? []).map(g => {
                 const pct = g.target_amount > 0 ? Math.round((g.current_amount / g.target_amount) * 100) : 0;
-                const days = g.deadline ? Math.ceil((new Date(g.deadline).getTime() - Date.now()) / 86400000) : null;
-                return `${g.title}: ${pct}% ($${g.current_amount}/$${g.target_amount})${days !== null ? `, ${days}d left` : ""}`;
+                const days = g.deadline ? Math.ceil((new Date(g.deadline + "T00:00:00").getTime() - Date.now()) / 86400000) : null;
+                return `${g.title}: ${pct}% ($${g.current_amount.toFixed(2)}/$${g.target_amount.toFixed(2)})${days !== null ? `, ${days}d left` : ""}`;
             }).join("; ")
             : "No active goals";
 
