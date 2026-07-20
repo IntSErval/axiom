@@ -39,6 +39,11 @@
     background: rgba(120, 160, 255, 0.3);
   }
 
+  :focus-visible {
+    outline: 2px solid rgba(141, 166, 255, 0.7);
+    outline-offset: 2px;
+  }
+
   input::placeholder,
   textarea::placeholder {
     color: rgba(255, 255, 255, 0.28);

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { MotionConfig } from "framer-motion";
 import { GlowCursor } from "@/components/background/Glowtrail";
 import "./globals.css";
 
@@ -29,7 +30,9 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#07080d] text-zinc-50 antialiased">
         <div aria-hidden className="bubble bubble-a" />
         <div aria-hidden className="bubble bubble-b" />
-        <div className="relative z-[1]">{children}</div>
+        <MotionConfig reducedMotion="user">
+          <div className="relative z-[1]">{children}</div>
+        </MotionConfig>
         <GlowCursor />
       </body>
     </html>

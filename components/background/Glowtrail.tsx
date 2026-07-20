@@ -1,7 +1,23 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useSyncExternalStore } from "react";
+
+const QUERIES = ["(pointer: fine)", "(prefers-reduced-motion: no-preference)"];
+
+function subscribeMedia(cb: () => void) {
+    const lists = QUERIES.map((q) => window.matchMedia(q));
+    lists.forEach((l) => l.addEventListener("change", cb));
+    return () => lists.forEach((l) => l.removeEventListener("change", cb));
+}
 
 export const GlowCursor: React.FC = () => {
+    // Only run on fine-pointer devices without reduced-motion — otherwise the
+    // system cursor stays and no trail renders (a11y + touch devices).
+    const enabled = useSyncExternalStore(
+        subscribeMedia,
+        () => QUERIES.every((q) => window.matchMedia(q).matches),
+        () => false,
+    );
+
     const cursorPointRef = useRef<HTMLDivElement | null>(null);
     const cursorGlowRef = useRef<HTMLDivElement | null>(null);
 
@@ -15,6 +31,8 @@ export const GlowCursor: React.FC = () => {
     const glowSpeed = 0.08;
 
     useEffect(() => {
+        if (!enabled) return;
+
         // Hide default cursor on the whole page
         document.body.style.cursor = "none";
 
@@ -58,7 +76,9 @@ export const GlowCursor: React.FC = () => {
             cancelAnimationFrame(animationFrameId);
             document.body.style.cursor = "auto";
         };
-    }, []);
+    }, [enabled]);
+
+    if (!enabled) return null;
 
     return (
         <>

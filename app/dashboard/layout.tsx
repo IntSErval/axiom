@@ -25,12 +25,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="glass rounded-full px-4 py-2 text-sm font-bold italic tracking-wide text-zinc-50 select-none">
                     AXIOM
                 </div>
-                <nav className="flex items-center gap-2">
+                <nav className="flex min-w-0 items-center gap-2 overflow-x-auto [scrollbar-width:none]">
                     {TABS.map((t) => {
                         const active = t.exact ? pathname === t.href : pathname?.startsWith(t.href);
                         return (
                             <Link key={t.href} href={t.href} className={cn(
-                                'glass rounded-full px-4 py-2 text-sm transition-[color,background-color,transform] duration-200 active:scale-[0.97]',
+                                'glass whitespace-nowrap rounded-full px-4 py-2.5 sm:py-2 text-sm transition-[color,background-color,transform] duration-200 active:scale-[0.97]',
                                 active ? 'bg-white/[0.10] text-zinc-50' : 'text-white/45 hover:text-zinc-50'
                             )}>
                                 {t.label}

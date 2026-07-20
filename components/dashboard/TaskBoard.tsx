@@ -65,6 +65,7 @@ function TaskRow({
                         type="checkbox"
                         checked={task.status === "done"}
                         onChange={() => updateTaskStatus(task.id, task.status === "done" ? "todo" : "done")}
+                        aria-label={`Mark '${task.title}' ${task.status === "done" ? "not done" : "done"}`}
                         className="w-4 h-4 accent-blue-500 shrink-0"
                     />
                     <div className="flex flex-col min-w-0">
@@ -145,8 +146,9 @@ function TaskForm({
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm text-zinc-500 mb-1">Title</label>
+                <label htmlFor="task-title" className="block text-sm text-zinc-500 mb-1">Title</label>
                 <input
+                    id="task-title"
                     required
                     value={data.title}
                     onChange={(e) => setData({ ...data, title: e.target.value })}
@@ -155,8 +157,9 @@ function TaskForm({
                 />
             </div>
             <div>
-                <label className="block text-sm text-zinc-500 mb-1">Description</label>
+                <label htmlFor="task-desc" className="block text-sm text-zinc-500 mb-1">Description</label>
                 <textarea
+                    id="task-desc"
                     rows={3}
                     value={data.description}
                     onChange={(e) => setData({ ...data, description: e.target.value })}
@@ -238,8 +241,9 @@ function ProjectForm({ onSubmit }: { onSubmit: (fd: FormData) => Promise<void> }
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm text-zinc-500 mb-1">Project Name</label>
+                <label htmlFor="project-name" className="block text-sm text-zinc-500 mb-1">Project Name</label>
                 <input
+                    id="project-name"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
