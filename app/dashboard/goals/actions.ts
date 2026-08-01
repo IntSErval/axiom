@@ -1,14 +1,7 @@
 "use server";
-import { supabaseServer } from "@/lib/supabase-server";
+import { requireUser } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 import type { MilestoneStatus } from "@/lib/database";
-
-async function getUser() {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
-    return { supabase, user };
-}
 
 function parsePositiveAmount(formData: FormData, field: string): number {
     const raw = (formData.get(field) as string)?.trim();
@@ -19,7 +12,7 @@ function parsePositiveAmount(formData: FormData, field: string): number {
 }
 
 export async function createGoal(formData: FormData) {
-    const { supabase, user } = await getUser();
+    const { supabase, user } = await requireUser();
     const title = formData.get("title") as string;
     if (!title?.trim()) throw new Error("Title is required");
     const target_amount = parsePositiveAmount(formData, "target_amount");
@@ -41,7 +34,7 @@ export async function createGoal(formData: FormData) {
 }
 
 export async function updateGoal(formData: FormData) {
-    const { supabase, user } = await getUser();
+    const { supabase, user } = await requireUser();
     const id = formData.get("id") as string;
     const title = formData.get("title") as string;
     if (!title?.trim()) throw new Error("Title is required");
@@ -73,7 +66,7 @@ export async function updateGoal(formData: FormData) {
 
 export async function updateGoalProgress(goalId: string, current_amount: number) {
     if (isNaN(current_amount) || current_amount < 0) throw new Error("Invalid amount");
-    const { supabase, user } = await getUser();
+    const { supabase, user } = await requireUser();
     const { data: goal } = await supabase.from("goals").select("target_amount, status").eq("id", goalId).eq("user_id", user.id).single();
     if (!goal) throw new Error("Goal not found");
     const reachedTarget = goal.status === "active" && current_amount >= goal.target_amount;
@@ -88,14 +81,14 @@ export async function updateGoalProgress(goalId: string, current_amount: number)
 }
 
 export async function deleteGoal(goalId: string) {
-    const { supabase, user } = await getUser();
+    const { supabase, user } = await requireUser();
     const { error } = await supabase.from("goals").delete().eq("id", goalId).eq("user_id", user.id);
     if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
 
 export async function createMilestone(formData: FormData) {
-    const { supabase, user } = await getUser();
+    const { supabase, user } = await requireUser();
     const goal_id = formData.get("goal_id") as string;
     const title = formData.get("title") as string;
     if (!goal_id) throw new Error("goal_id is required");
@@ -117,7 +110,7 @@ export async function createMilestone(formData: FormData) {
 }
 
 export async function toggleMilestone(milestoneId: string, currentStatus: MilestoneStatus) {
-    const { supabase, user } = await getUser();
+    const { supabase, user } = await requireUser();
     // Ownership check: join through goal to verify caller owns it
     const { data: ms } = await supabase.from("milestones").select("goal_id").eq("id", milestoneId).single();
     if (!ms) throw new Error("Milestone not found");

@@ -1,11 +1,9 @@
 "use server";
-import { supabaseServer } from "@/lib/supabase-server";
+import { requireUser } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 
 export async function createTask(formData: FormData) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
 
     await supabase.from("tasks").insert({
         user_id: user.id,
@@ -20,25 +18,19 @@ export async function createTask(formData: FormData) {
 }
 
 export async function updateTaskStatus(taskId: string, status: string) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
     await supabase.from("tasks").update({ status }).eq("id", taskId).eq("user_id", user.id);
     revalidatePath("/dashboard/tasks");
 }
 
 export async function reorderTask(taskId: string, project_id: string | null) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
     await supabase.from("tasks").update({ project_id }).eq("id", taskId).eq("user_id", user.id);
     revalidatePath("/dashboard/tasks");
 }
 
 export async function updateTask(formData: FormData) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
 
     const id = formData.get("id") as string;
     await supabase.from("tasks").update({
@@ -52,9 +44,7 @@ export async function updateTask(formData: FormData) {
 }
 
 export async function createProject(formData: FormData) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
 
     await supabase.from("projects").insert({
         user_id: user.id,
@@ -65,9 +55,7 @@ export async function createProject(formData: FormData) {
 }
 
 export async function deleteTask(taskId: string) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
     await supabase.from("tasks").delete().eq("id", taskId).eq("user_id", user.id);
     revalidatePath("/dashboard/tasks");
 }

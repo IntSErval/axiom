@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
 import { getCoachResponse, type ChatMessage } from "@/lib/agents/coach-agent";
 
 export async function POST(req: NextRequest) {
     try {
         const { messages } = await req.json() as { messages: ChatMessage[] };
-        const supabase = await supabaseServer();
-        const { data: { user } } = await supabase.auth.getUser();
+        const { supabase, user } = await supabaseUser();
         if (!user) return NextResponse.json({ reply: "Please sign in to chat with your coach." }, { status: 200 });
 
         const today = new Date().toISOString().slice(0, 10);

@@ -1,15 +1,11 @@
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
 import { GoalList } from "@/components/dashboard/GoalList";
 import { deriveCurrent } from "@/lib/goal-progress";
 import type { Goal } from "@/lib/database";
 
 export default async function GoalsPage() {
-    const supabase = await supabaseServer();
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const { supabase, user } = await supabaseUser();
 
     if (!user) {
         redirect("/login");

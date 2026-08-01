@@ -1,5 +1,13 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
+import { cached } from "@/lib/cache";
+
+// Insights are proactive nudge cards polled on every dashboard mount. They're
+// derived purely from the user's own data, so we cache the computed result
+// per-user. TTL is the consistency model: a user's own write shows up within
+// INSIGHTS_TTL_MS at worst (acceptable for dismissible nudges). Tighten, or add
+// invalidate("insights:"+user.id) to the domain write actions, if instant.
+const INSIGHTS_TTL_MS = 60_000;
 
 interface Insight {
     id: string;
@@ -11,13 +19,10 @@ interface Insight {
 
 export async function GET() {
     try {
-        const supabase = await supabaseServer();
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-
+        const { supabase, user } = await supabaseUser();
         if (!user) return NextResponse.json({ insights: [] });
 
+        const insights = await cached(`insights:${user.id}`, INSIGHTS_TTL_MS, async () => {
         const today = new Date().toISOString().slice(0, 10);
         const monthStart = today.slice(0, 7) + "-01";
         const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -66,12 +71,12 @@ export async function GET() {
             habitLogs = data ?? [];
         }
 
-        const insights: Insight[] = [];
+        const cards: Insight[] = [];
 
         // tasks-overdue
         const overdue = openTasks.filter((t) => t.due_date && t.due_date < today);
         if (overdue.length > 0) {
-            insights.push({
+            cards.push({
                 id: "tasks-overdue",
                 domain: "tasks",
                 message: `${overdue.length} task${overdue.length > 1 ? "s" : ""} overdue — knock out the oldest one first`,
@@ -81,7 +86,7 @@ export async function GET() {
             // tasks-p1 (only if overdue didn't fire)
             const p1 = openTasks.filter((t) => t.priority === 1);
             if (p1.length > 0) {
-                insights.push({
+                cards.push({
                     id: "tasks-p1",
                     domain: "tasks",
                     message: `You have ${p1.length} P1 task${p1.length > 1 ? "s" : ""} waiting`,
@@ -96,14 +101,14 @@ export async function GET() {
         const coldHabit = coldHabits[0];
         if (coldHabit && overdue.length > 0) {
             // habits-tasks-dip (cross-domain: cold habit + overdue tasks)
-            insights.push({
+            cards.push({
                 id: "habits-tasks-dip",
                 domain: "habits",
                 message: `Consistency is dipping — '${coldHabit.name}' has gone quiet and ${overdue.length} task${overdue.length > 1 ? "s" : ""} ${overdue.length > 1 ? "are" : "is"} overdue`,
                 href: "/dashboard/habits",
             });
         } else if (coldHabit) {
-            insights.push({
+            cards.push({
                 id: "habits-cold",
                 domain: "habits",
                 message: `'${coldHabit.name}' has gone quiet — 7+ days without a log`,
@@ -129,14 +134,14 @@ export async function GET() {
                 : undefined;
             if (overBudget && draggedGoal) {
                 // finance-goal-drag (cross-domain: over-budget category feeds an active goal)
-                insights.push({
+                cards.push({
                     id: "finance-goal-drag",
                     domain: "finance",
                     message: `'${overBudget.category}' is over budget — that's slowing your '${draggedGoal.title}' goal`,
                     href: "/dashboard/finance",
                 });
             } else if (overBudget) {
-                insights.push({
+                cards.push({
                     id: "finance-over-budget",
                     domain: "finance",
                     message: `'${overBudget.category}' is over budget this month`,
@@ -147,7 +152,7 @@ export async function GET() {
 
         // coach-weekly (Mondays only)
         if (new Date().getDay() === 1) {
-            insights.push({
+            cards.push({
                 id: "coach-weekly",
                 domain: "coach",
                 message: "Weekly review ready — open the coach to reflect on last week",
@@ -164,13 +169,16 @@ export async function GET() {
         );
         if (draggedGoalHabit) {
             const linkedHabit = habits.find((h) => h.id === draggedGoalHabit.habit_id);
-            insights.push({
+            cards.push({
                 id: "goal-habit-cold",
                 domain: "coach",
                 message: `'${draggedGoalHabit.title}' depends on '${linkedHabit?.name}', which has gone quiet this week`,
                 action: "open-coach",
             });
         }
+
+            return cards;
+        });
 
         return NextResponse.json({ insights });
     } catch {

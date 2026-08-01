@@ -1,13 +1,9 @@
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
 import { TaskBoard } from "@/components/dashboard/TaskBoard";
 
 export default async function TasksPage() {
-    const supabase = await supabaseServer();
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const { supabase, user } = await supabaseUser();
 
     if (!user) {
         redirect("/login");

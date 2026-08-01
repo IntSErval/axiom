@@ -1,16 +1,12 @@
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
 import { HabitList } from "@/components/dashboard/HabitList";
 
 // 26 weeks — matches the contribution heatmap window
 const LOOKBACK = new Date(Date.now() - 26 * 7 * 86400000).toISOString();
 
 export default async function HabitsPage() {
-    const supabase = await supabaseServer();
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const { supabase, user } = await supabaseUser();
 
     if (!user) {
         redirect("/login");

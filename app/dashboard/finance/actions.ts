@@ -1,16 +1,9 @@
 "use server";
-import { supabaseServer } from "@/lib/supabase-server";
+import { requireUser } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const ACCOUNT_TYPES = ["checking", "savings", "investment"];
-
-async function requireUser() {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
-    return { supabase, user };
-}
 
 // ponytail: read-then-write balance update; fine for a single user, move to a SQL RPC if concurrent writers ever matter
 async function shiftBalance(supabase: SupabaseClient, userId: string, accountId: string, delta: number) {

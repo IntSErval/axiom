@@ -1,11 +1,9 @@
 "use server";
-import { supabaseServer } from "@/lib/supabase-server";
+import { requireUser } from "@/lib/supabase-server";
 import { revalidatePath } from "next/cache";
 
 export async function logHabit(habitId: string) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
     const { data: habit } = await supabase.from("habits").select("id").eq("id", habitId).eq("user_id", user.id).single();
     if (!habit) throw new Error("Habit not found");
     const today = new Date().toISOString().slice(0, 10);
@@ -14,9 +12,7 @@ export async function logHabit(habitId: string) {
 }
 
 export async function createHabit(formData: FormData) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
     const name = formData.get("name") as string;
     if (!name) throw new Error("name required");
     const target = Number(formData.get("target") ?? 1);
@@ -31,9 +27,7 @@ export async function createHabit(formData: FormData) {
 }
 
 export async function updateHabit(formData: FormData) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
     const name = formData.get("name") as string;
     if (!name) throw new Error("name required");
     const target = Number(formData.get("target") ?? 1);
@@ -47,9 +41,7 @@ export async function updateHabit(formData: FormData) {
 }
 
 export async function deleteHabit(habitId: string) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const { supabase, user } = await requireUser();
     await supabase.from("habits").delete().eq("id", habitId).eq("user_id", user.id);
     revalidatePath("/dashboard/habits");
 }

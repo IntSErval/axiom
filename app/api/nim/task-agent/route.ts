@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTaskInsight } from "@/lib/agents/task-agent";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
 import type { Task } from "@/lib/database";
 
 export async function POST(req: NextRequest) {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await supabaseUser();
     if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
     try {

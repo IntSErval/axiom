@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
 import { computeStreak } from "@/lib/streaks";
 import { BentoHome, type BentoData, type BentoTask } from "@/components/dashboard/BentoHome";
 import type { Habit, HabitLog, Account, Transaction, Goal } from "@/lib/database";
 
 export default async function DashboardHomePage() {
-    const supabase = await supabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { supabase, user } = await supabaseUser();
     if (!user) redirect("/login");
 
     const uid = user.id;

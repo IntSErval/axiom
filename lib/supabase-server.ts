@@ -27,3 +27,28 @@ export async function supabaseServer() {
         }
     );
 }
+
+/**
+ * Server client + the caller's identity, resolved from the JWT via getClaims()
+ * — verified locally against the project JWKS (cached in-process) instead of a
+ * network getUser() round-trip to the Auth server. proxy.ts still runs the
+ * network-verified getUser() guard on every request, and RLS enforces per-row
+ * ownership, so trusting the verified `sub` claim here adds no exposure.
+ * `user` is null when unauthenticated — callers redirect / return / throw.
+ *
+ * ponytail: falls back to a network call automatically while the project is on
+ * legacy HS256 secrets; becomes zero-network once asymmetric signing keys are on.
+ */
+export async function supabaseUser() {
+    const supabase = await supabaseServer();
+    const { data } = await supabase.auth.getClaims();
+    const sub = data?.claims.sub;
+    return { supabase, user: sub ? { id: sub } : null };
+}
+
+/** Same as supabaseUser() but throws when unauthenticated — for server actions. */
+export async function requireUser() {
+    const { supabase, user } = await supabaseUser();
+    if (!user) throw new Error("Not authenticated");
+    return { supabase, user };
+}

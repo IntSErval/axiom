@@ -1,13 +1,9 @@
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase-server";
+import { supabaseUser } from "@/lib/supabase-server";
 import { FinanceDashboard } from "@/components/dashboard/FinanceDashboard";
 
 export default async function FinancePage() {
-    const supabase = await supabaseServer();
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const { supabase, user } = await supabaseUser();
 
     if (!user) {
         redirect("/login");
