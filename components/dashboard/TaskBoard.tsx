@@ -48,10 +48,12 @@ function TaskRow({
     task,
     onEdit,
     onDelete,
+    onToggle,
 }: {
     task: Task;
     onEdit: (task: Task) => void;
     onDelete: (id: string) => void;
+    onToggle: (task: Task) => void;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: task.id });
     const style = { transform: CSS.Transform.toString(transform), transition };
@@ -64,7 +66,7 @@ function TaskRow({
                     <input
                         type="checkbox"
                         checked={task.status === "done"}
-                        onChange={() => updateTaskStatus(task.id, task.status === "done" ? "todo" : "done")}
+                        onChange={() => onToggle(task)}
                         aria-label={`Mark '${task.title}' ${task.status === "done" ? "not done" : "done"}`}
                         className="w-4 h-4 accent-blue-500 shrink-0"
                     />
@@ -319,8 +321,28 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
     }
 
     const onCreateTask = useCallback(async (fd: FormData) => {
-        await createTask(fd);
+        // ponytail: optimistic insert — revalidate resyncs the real row (with real id) via initialTasks effect
+        const temp: Task = {
+            id: crypto.randomUUID(),
+            user_id: "",
+            title: (fd.get("title") as string) ?? "",
+            description: (fd.get("description") as string) || null,
+            priority: (Number(fd.get("priority")) || 2) as Task["priority"],
+            status: "todo",
+            project_id: (fd.get("project_id") as string) || null,
+            due_date: (fd.get("due_date") as string) || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        setTasks((prev) => [...prev, temp]);
         setModalOpen(false);
+        await createTask(fd);
+    }, []);
+
+    const onToggleTask = useCallback((task: Task) => {
+        const next = task.status === "done" ? "todo" : "done";
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
+        updateTaskStatus(task.id, next); // fire-and-forget; revalidate reconciles
     }, []);
 
     const onUpdateTask = useCallback(async (fd: FormData) => {
@@ -384,6 +406,7 @@ export function TaskBoard({ initialTasks, projects }: { initialTasks: Task[]; pr
                                 setModalOpen(true);
                             }}
                             onDelete={onDeleteTask}
+                            onToggle={onToggleTask}
                         />
                     ))
                 )}

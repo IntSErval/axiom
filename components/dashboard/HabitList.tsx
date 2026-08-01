@@ -14,16 +14,20 @@ type ModalState =
     | { mode: "create" }
     | { mode: "edit"; habit: Habit };
 
-export function HabitList({ habits: initialHabits, logs }: { habits: Habit[]; logs: HabitLog[] }) {
+export function HabitList({ habits: initialHabits, logs: initialLogs }: { habits: Habit[]; logs: HabitLog[] }) {
     const [habits, setHabits] = useState(initialHabits);
+    const [logs, setLogs] = useState(initialLogs);
     const [modal, setModal] = useState<ModalState>({ mode: "closed" });
     const [insight, setInsight] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<Habit | null>(null);
 
-    // Re-sync after server actions revalidate (create/edit land in initialHabits)
+    // Re-sync after server actions revalidate (create/edit/log land in initial props)
     useEffect(() => {
         setHabits(initialHabits);
     }, [initialHabits]);
+    useEffect(() => {
+        setLogs(initialLogs);
+    }, [initialLogs]);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
@@ -103,7 +107,11 @@ export function HabitList({ habits: initialHabits, logs }: { habits: Habit[]; lo
                             </div>
                             <button
                                 type="button"
-                                onClick={() => logHabit(habit.id)}
+                                onClick={() => {
+                                    // ponytail: optimistic log — revalidate resyncs the real row via initialLogs effect
+                                    setLogs((prev) => [...prev, { id: crypto.randomUUID(), habit_id: habit.id, completed_at: today, note: null }]);
+                                    logHabit(habit.id);
+                                }}
                                 disabled={loggedToday}
                                 className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
                             >

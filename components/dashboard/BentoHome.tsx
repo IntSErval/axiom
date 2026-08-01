@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateTaskStatus, createTask } from "@/app/dashboard/tasks/actions";
 import { logHabit } from "@/app/dashboard/habits/actions";
@@ -163,15 +163,20 @@ function FinanceCard({ finance }: { finance: BentoData["finance"] }) {
 function HabitsCard({ habits }: { habits: BentoData["habits"] }) {
     const router = useRouter();
     const [, startTransition] = useTransition();
+    // ponytail: optimistic mark-done — fills the ring instantly; router.refresh reconciles
+    const [optimisticHabits, markDone] = useOptimistic(
+        habits,
+        (state, id: string) => state.map((h) => (h.id === id ? { ...h, done: true, week: Math.min(h.week + 1, 7) } : h)),
+    );
     return (
         <>
             <div className="flex items-center justify-between">
                 <span className={LABEL}>Habits</span>
-                <span className="text-xs text-white/40">{habits.filter(h => h.done).length} of {habits.length} today</span>
+                <span className="text-xs text-white/40">{optimisticHabits.filter(h => h.done).length} of {optimisticHabits.length} today</span>
             </div>
             <div className="mt-2 flex flex-1 flex-wrap items-center justify-around gap-2">
-                {habits.length === 0 && <p className="text-sm text-white/40">No habits yet — add one in the Habits tab.</p>}
-                {habits.map((h, i) => {
+                {optimisticHabits.length === 0 && <p className="text-sm text-white/40">No habits yet — add one in the Habits tab.</p>}
+                {optimisticHabits.map((h, i) => {
                     const color = ACCENTS[i % ACCENTS.length];
                     // ponytail: ring = completions in the last 7 days, matching the design; per-frequency targets when needed
                     const dash = (Math.min(h.week / 7, 1) * 163.4).toFixed(1);
@@ -179,7 +184,7 @@ function HabitsCard({ habits }: { habits: BentoData["habits"] }) {
                         <button
                             key={h.id}
                             title={h.done ? "Done today" : "Mark done today"}
-                            onClick={() => { if (!h.done) startTransition(async () => { await logHabit(h.id); router.refresh(); }); }}
+                            onClick={() => { if (!h.done) startTransition(async () => { markDone(h.id); await logHabit(h.id); router.refresh(); }); }}
                             className="flex cursor-pointer flex-col items-center gap-2 rounded-[18px] border-none bg-transparent px-2.5 py-2 transition-[background,transform] hover:-translate-y-[3px] hover:bg-white/[0.05] active:scale-95"
                         >
                             <span className="relative block h-[62px] w-[62px]">
@@ -244,7 +249,15 @@ function TasksCard({ tasks }: { tasks: BentoTask[] }) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [title, setTitle] = useState("");
-    const remaining = tasks.filter(t => t.status !== "done").length;
+    // ponytail: optimistic add/toggle — instant list update; router.refresh reconciles
+    const [optimisticTasks, applyOptimistic] = useOptimistic(
+        tasks,
+        (state, action: { type: "add"; task: BentoTask } | { type: "toggle"; id: string }) =>
+            action.type === "add"
+                ? [...state, action.task]
+                : state.map((t) => (t.id === action.id ? { ...t, status: t.status === "done" ? "todo" : "done" } : t)),
+    );
+    const remaining = optimisticTasks.filter(t => t.status !== "done").length;
 
     const add = () => {
         const label = title.trim();
@@ -253,7 +266,11 @@ function TasksCard({ tasks }: { tasks: BentoTask[] }) {
         fd.set("title", label);
         fd.set("priority", "3");
         setTitle("");
-        startTransition(async () => { await createTask(fd); router.refresh(); });
+        startTransition(async () => {
+            applyOptimistic({ type: "add", task: { id: crypto.randomUUID(), title: label, priority: 3, status: "todo", due_date: null } });
+            await createTask(fd);
+            router.refresh();
+        });
     };
 
     return (
@@ -278,13 +295,13 @@ function TasksCard({ tasks }: { tasks: BentoTask[] }) {
                 >+</button>
             </div>
             <div className="-mr-2 mt-3 flex flex-1 flex-col gap-[3px] overflow-y-auto pr-2">
-                {tasks.length === 0 && <p className="text-sm text-white/40">All caught up 🎉</p>}
-                {tasks.map((t) => {
+                {optimisticTasks.length === 0 && <p className="text-sm text-white/40">All caught up 🎉</p>}
+                {optimisticTasks.map((t) => {
                     const done = t.status === "done";
                     return (
                         <button
                             key={t.id}
-                            onClick={() => startTransition(async () => { await updateTaskStatus(t.id, done ? "todo" : "done"); router.refresh(); })}
+                            onClick={() => startTransition(async () => { applyOptimistic({ type: "toggle", id: t.id }); await updateTaskStatus(t.id, done ? "todo" : "done"); router.refresh(); })}
                             className="flex cursor-pointer items-center gap-3 rounded-[13px] border-none bg-transparent p-2.5 text-left text-inherit transition-colors hover:bg-white/[0.05]"
                         >
                             <span
