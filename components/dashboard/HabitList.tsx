@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { CheckBox } from "@/components/ui/neu";
 import { EditIcon, DeleteIcon } from "@/components/ui/icons";
 import { computeStreak } from "@/lib/streaks";
 import { logHabit, createHabit, updateHabit, deleteHabit } from "@/app/dashboard/habits/actions";
@@ -13,6 +13,12 @@ type ModalState =
     | { mode: "closed" }
     | { mode: "create" }
     | { mode: "edit"; habit: Habit };
+
+const MILESTONES = [7, 14, 30, 60, 90];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const CARD_HOVER =
+    "transition-[transform,box-shadow] duration-200 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] " +
+    "hover:-translate-y-[2px] hover:[box-shadow:-10px_-10px_24px_rgba(255,255,255,0.055),13px_13px_30px_rgba(0,0,0,0.62)]";
 
 export function HabitList({ habits: initialHabits, logs: initialLogs }: { habits: Habit[]; logs: HabitLog[] }) {
     const [habits, setHabits] = useState(initialHabits);
@@ -42,24 +48,30 @@ export function HabitList({ habits: initialHabits, logs: initialLogs }: { habits
     }, []);
 
     const today = new Date().toISOString().slice(0, 10);
+    const doneToday = habits.filter((h) =>
+        logs.some((l) => l.habit_id === h.id && l.completed_at.slice(0, 10) === today)
+    ).length;
 
     return (
-        <div className="max-w-2xl mx-auto py-8 space-y-3">
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-bold italic text-zinc-50">Habits</h1>
+        <div className="flex flex-col gap-[22px] py-8 [animation:paneIn_320ms_cubic-bezier(0.23,1,0.32,1)_both]">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-[25px] font-semibold tracking-[-0.01em] text-[#eceef3]">Habits</h1>
+                    <p className="mt-[3px] text-[13.5px] tabular-nums text-[#868da0]">
+                        {doneToday} of {habits.length} done today
+                    </p>
+                </div>
                 <button
                     type="button"
                     onClick={() => setModal({ mode: "create" })}
-                    className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 text-sm hover:bg-blue-500/30 transition-colors"
+                    className="neu-btn px-5 py-3 rounded-[15px] text-[#6fd6c3] text-[13px] font-semibold"
                 >
-                    + New Habit
+                    + New habit
                 </button>
             </div>
             {insight && (
-                <div className="mt-3 flex items-center gap-2 text-sm mb-4">
-                    <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 italic">
-                        ✦ {insight}
-                    </span>
+                <div className="self-start inline-flex items-center gap-2 neu-inset px-4 py-2 rounded-[13px] text-[12.5px] italic text-[#6fd6c3]">
+                    ✦ {insight}
                 </div>
             )}
 
@@ -67,59 +79,94 @@ export function HabitList({ habits: initialHabits, logs: initialLogs }: { habits
                 const habitLogs = logs.filter((l) => l.habit_id === habit.id);
                 const streak = computeStreak(habitLogs);
                 const loggedToday = habitLogs.some((l) => l.completed_at.slice(0, 10) === today);
+                const nextMilestone = MILESTONES.find((m) => m > streak) ?? streak + 30;
+
+                // Last 7 days of pips, oldest → today
+                const loggedDays = new Set(habitLogs.map((l) => l.completed_at.slice(0, 10)));
+                const pips = Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - (6 - i));
+                    const iso = d.toISOString().slice(0, 10);
+                    return { iso, on: loggedDays.has(iso), day: DAYS[d.getDay()], isToday: i === 6 };
+                });
 
                 return (
-                    <GlassCard key={habit.id} className="p-4 group">
-                        <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-zinc-50">{habit.name}</p>
-                            <p className="text-sm text-zinc-500">
-                                {streak > 0 && (
-                                    <motion.span
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ type: "spring", stiffness: 400, damping: 12 }}
-                                        className="text-amber-400 inline-block"
+                    <GlassCard key={habit.id} className={`group flex items-center gap-5 rounded-[24px] px-[26px] py-[22px] ${CARD_HOVER}`}>
+                        <CheckBox
+                            round
+                            size={46}
+                            done={loggedToday}
+                            disabled={loggedToday}
+                            label={`Log ${habit.name} today`}
+                            onClick={() => {
+                                // ponytail: optimistic log — revalidate resyncs the real row via initialLogs effect
+                                setLogs((prev) => [...prev, { id: crypto.randomUUID(), habit_id: habit.id, completed_at: today, note: null }]);
+                                logHabit(habit.id);
+                            }}
+                        />
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2.5">
+                                <span className={`text-[15.5px] font-semibold transition-colors ${loggedToday ? "text-[#9aa1b0]" : "text-[#e3e6ec]"}`}>
+                                    {habit.name}
+                                </span>
+                                <span className="neu-pill rounded-[8px] px-[9px] py-[3px] text-[10.5px] font-semibold tracking-[0.05em] text-[#868da0] capitalize">
+                                    {habit.frequency}
+                                </span>
+                                <span className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        type="button"
+                                        onClick={() => setModal({ mode: "edit", habit })}
+                                        className="p-1 text-[#868da0] hover:text-[#d3d7e0] transition-colors"
+                                        aria-label="Edit habit"
                                     >
-                                        🔥 {streak} day streak
-                                    </motion.span>
-                                )}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    type="button"
-                                    onClick={() => setModal({ mode: "edit", habit })}
-                                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] transition-colors"
-                                    aria-label="Edit habit"
-                                >
-                                    <EditIcon />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmDelete(habit)}
-                                    className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                    aria-label="Delete habit"
-                                >
-                                    <DeleteIcon />
-                                </button>
+                                        <EditIcon />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmDelete(habit)}
+                                        className="p-1 text-[#868da0] hover:text-[#f2a86f] transition-colors"
+                                        aria-label="Delete habit"
+                                    >
+                                        <DeleteIcon />
+                                    </button>
+                                </span>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    // ponytail: optimistic log — revalidate resyncs the real row via initialLogs effect
-                                    setLogs((prev) => [...prev, { id: crypto.randomUUID(), habit_id: habit.id, completed_at: today, note: null }]);
-                                    logHabit(habit.id);
-                                }}
-                                disabled={loggedToday}
-                                className="px-3 py-1.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-                            >
-                                {loggedToday ? "Logged" : "Log today"}
-                            </button>
+                            <div className="mt-[11px] flex items-center gap-2.5">
+                                <div className="neu-inset relative h-[7px] max-w-[220px] flex-1 overflow-hidden rounded-[4px]">
+                                    <div
+                                        className="absolute inset-y-0 left-0 rounded-[4px] transition-[width] duration-500 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)]"
+                                        style={{
+                                            width: `${Math.round((streak / nextMilestone) * 100)}%`,
+                                            background: "linear-gradient(90deg, rgba(111,214,195,0.5), #6fd6c3)",
+                                            boxShadow: "0 0 6px rgba(111,214,195,0.35)",
+                                        }}
+                                    />
+                                </div>
+                                <span className="whitespace-nowrap text-[11.5px] tabular-nums text-[#868da0]">
+                                    {nextMilestone} d in {nextMilestone - streak}
+                                </span>
+                            </div>
                         </div>
+                        <div className="flex flex-none flex-col items-end gap-[9px]">
+                            <span className="neu-pill whitespace-nowrap rounded-[10px] px-3 py-[5px] text-xs font-semibold tabular-nums text-[#f2a86f]">
+                                {streak} day streak
+                            </span>
+                            <div className="flex gap-1.5">
+                                {pips.map((p) => (
+                                    <div
+                                        key={p.iso}
+                                        title={p.day}
+                                        className="h-[11px] w-[11px] rounded-full transition-[background,box-shadow] duration-250"
+                                        style={{
+                                            background: p.on ? (p.isToday ? "#6fd6c3" : "rgba(111,214,195,0.55)") : "rgba(0,0,0,0.28)",
+                                            boxShadow: p.on
+                                                ? p.isToday ? "0 0 7px rgba(111,214,195,0.5)" : "none"
+                                                : "inset 2px 2px 4px rgba(0,0,0,0.4), inset -1px -1px 3px rgba(255,255,255,0.03)",
+                                        }}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                        <HabitHeatmap logs={habitLogs} />
                     </GlassCard>
                 );
             })}
@@ -146,108 +193,6 @@ export function HabitList({ habits: initialHabits, logs: initialLogs }: { habits
     );
 }
 
-const MILESTONES = [7, 14, 30, 60, 90];
-const HEATMAP_WEEKS = 26;
-
-// GitHub-style contribution grid: columns = weeks, rows = Sun–Sat.
-// All date math in UTC to match the app's completed_at convention (toISOString dates).
-function HabitHeatmap({ logs }: { logs: HabitLog[] }) {
-    const counts = new Map<string, number>();
-    for (const l of logs) {
-        const d = l.completed_at.slice(0, 10);
-        counts.set(d, (counts.get(d) ?? 0) + 1);
-    }
-
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const start = new Date(todayIso + "T00:00:00Z");
-    start.setUTCDate(start.getUTCDate() - start.getUTCDay() - (HEATMAP_WEEKS - 1) * 7);
-
-    type Cell = { iso: string; count: number; milestone: number | null; future: boolean };
-    const weeks: Cell[][] = [];
-    // ponytail: streak runs computed within the fetched window only
-    let run = 0;
-    let best = 0;
-    const cursor = new Date(start);
-    for (let w = 0; w < HEATMAP_WEEKS; w++) {
-        const week: Cell[] = [];
-        for (let d = 0; d < 7; d++) {
-            const iso = cursor.toISOString().slice(0, 10);
-            const future = iso > todayIso;
-            const count = counts.get(iso) ?? 0;
-            let milestone: number | null = null;
-            if (!future) {
-                run = count > 0 ? run + 1 : 0;
-                best = Math.max(best, run);
-                if (count > 0 && MILESTONES.includes(run)) milestone = run;
-            }
-            week.push({ iso, count, milestone, future });
-            cursor.setUTCDate(cursor.getUTCDate() + 1);
-        }
-        weeks.push(week);
-    }
-
-    const fmt = (iso: string) =>
-        new Date(iso + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
-
-    return (
-        <div className="mt-4 overflow-x-auto">
-            <div className="flex gap-[3px] text-[9px] text-white/30 mb-1">
-                {weeks.map((week, i) => {
-                    const month = week[0].iso.slice(5, 7);
-                    const prevMonth = i > 0 ? weeks[i - 1][0].iso.slice(5, 7) : null;
-                    return (
-                        <span key={week[0].iso} className="w-[11px] shrink-0 overflow-visible whitespace-nowrap">
-                            {month !== prevMonth
-                                ? new Date(week[0].iso + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", timeZone: "UTC" })
-                                : ""}
-                        </span>
-                    );
-                })}
-            </div>
-            <div className="flex gap-[3px]">
-                {weeks.map((week) => (
-                    <div key={week[0].iso} className="flex flex-col gap-[3px]">
-                        {week.map((c) => (
-                            <div
-                                key={c.iso}
-                                title={
-                                    c.future
-                                        ? undefined
-                                        : `${fmt(c.iso)}${c.count > 0 ? " — logged" : ""}${c.milestone ? ` · ${c.milestone}-day milestone 🔥` : ""}`
-                                }
-                                className="h-[11px] w-[11px] shrink-0 rounded-[3px]"
-                                style={{
-                                    background: c.future
-                                        ? "transparent"
-                                        : c.count > 0
-                                            ? `rgba(141, 166, 255, ${Math.min(0.55 + c.count * 0.2, 1)})`
-                                            : "rgba(255, 255, 255, 0.06)",
-                                    boxShadow: c.milestone ? "0 0 0 1.5px rgba(240, 200, 120, 0.9)" : undefined,
-                                }}
-                            />
-                        ))}
-                    </div>
-                ))}
-            </div>
-            <div className="mt-3 flex items-center gap-1.5">
-                <span className="mr-1 text-[10px] uppercase tracking-[0.14em] text-white/30">Milestones</span>
-                {MILESTONES.map((m) => (
-                    <span
-                        key={m}
-                        className={`rounded-full border px-2 py-0.5 text-[10px] transition-colors ${
-                            best >= m
-                                ? "border-amber-400/25 bg-amber-400/15 text-amber-300"
-                                : "border-white/[0.08] text-white/30"
-                        }`}
-                    >
-                        {m}d
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 function HabitModal({ state, onClose }: { state: ModalState; onClose: () => void }) {
     const isEdit = state.mode === "edit";
     const habit = isEdit ? state.habit : null;
@@ -270,23 +215,23 @@ function HabitModal({ state, onClose }: { state: ModalState; onClose: () => void
         >
             <form action={handleSubmit} className="space-y-4">
                 <div>
-                    <label htmlFor="habit-name" className="block text-sm text-zinc-500 mb-1">Name</label>
+                    <label htmlFor="habit-name" className="block text-xs text-[#868da0] mb-1">Name</label>
                     <input
                         id="habit-name"
                         name="name"
                         required
                         defaultValue={habit?.name ?? ""}
-                        className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-zinc-50 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-3 py-2.5 rounded-[12px] neu-inset border-none text-[#d3d7e0] placeholder:text-[#5c6270] focus:outline-none"
                         placeholder="e.g. Morning run"
                     />
                 </div>
                 <div>
-                    <label htmlFor="habit-frequency" className="block text-sm text-zinc-500 mb-1">Frequency</label>
+                    <label htmlFor="habit-frequency" className="block text-xs text-[#868da0] mb-1">Frequency</label>
                     <select
                         id="habit-frequency"
                         name="frequency"
                         defaultValue={(habit?.frequency as HabitFrequency) ?? "daily"}
-                        className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-zinc-50 appearance-none focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-3 py-2.5 rounded-[12px] neu-inset border-none text-[#d3d7e0] appearance-none focus:outline-none"
                     >
                         <option value="daily">Daily</option>
                         <option value="weekly">Weekly</option>
@@ -294,27 +239,27 @@ function HabitModal({ state, onClose }: { state: ModalState; onClose: () => void
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="habit-target" className="block text-sm text-zinc-500 mb-1">Target completions per period</label>
+                    <label htmlFor="habit-target" className="block text-xs text-[#868da0] mb-1">Target completions per period</label>
                     <input
                         id="habit-target"
                         name="target"
                         type="number"
                         min={1}
                         defaultValue={habit?.target ?? 1}
-                        className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-zinc-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full px-3 py-2.5 rounded-[12px] neu-inset border-none text-[#d3d7e0] focus:outline-none"
                     />
                 </div>
                 <div className="flex gap-2 pt-2">
                     <button
                         type="submit"
-                        className="flex-1 py-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+                        className="neu-btn flex-1 py-2.5 rounded-[14px] text-[#6fd6c3] font-semibold"
                     >
                         {isEdit ? "Save changes" : "Create habit"}
                     </button>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 rounded-xl bg-white/[0.04] text-zinc-400 border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+                        className="neu-btn px-4 py-2 rounded-[13px] text-sm font-semibold text-[#868da0] hover:text-[#d3d7e0]"
                     >
                         Cancel
                     </button>

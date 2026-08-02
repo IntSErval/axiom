@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -14,9 +13,12 @@ import {
 } from "@/app/dashboard/finance/actions";
 import type { Account, AccountType, Transaction, Budget } from "@/lib/database";
 
-const INPUT = "w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-50 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500";
-const LABEL = "block text-xs text-zinc-500 mb-1";
-const HEADER_BTN = "px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors";
+const INPUT = "w-full neu-inset rounded-[12px] border-none px-3 py-2.5 text-sm text-[#d3d7e0] placeholder:text-[#5c6270] outline-none";
+const LABEL = "block text-xs text-[#868da0] mb-1";
+const HEADER_BTN = "neu-btn px-4 py-2 rounded-[13px] text-sm font-semibold text-[#6fd6c3]";
+const CARD_HOVER =
+    "transition-[transform,box-shadow] duration-200 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] " +
+    "hover:-translate-y-[2px] hover:[box-shadow:-10px_-10px_24px_rgba(255,255,255,0.055),13px_13px_30px_rgba(0,0,0,0.62)]";
 const CUSTOM = "__custom__";
 
 const ACCOUNT_TYPE_OPTIONS = [
@@ -36,55 +38,10 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
         <button
             type="submit"
             disabled={pending}
-            className="w-full py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-sm font-semibold text-white transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className="neu-btn w-full py-2.5 rounded-[14px] text-sm font-semibold text-[#6fd6c3] disabled:opacity-50 disabled:pointer-events-none"
         >
             {pending ? "Saving…" : children}
         </button>
-    );
-}
-
-/* ---------- Liquid envelope ---------- */
-
-const BODY_TOP = 24;
-const BODY_BOTTOM = 82;
-const BODY_H = BODY_BOTTOM - BODY_TOP;
-
-// Sine-ish wave, period 40, spanning wider than the envelope so a 40px drift loops seamlessly
-const WAVE_D = (() => {
-    let d = "M-160 0";
-    for (let x = -160; x < 280; x += 40) d += ` Q ${x + 10} -5 ${x + 20} 0 T ${x + 40} 0`;
-    return d + " V 70 H -160 Z";
-})();
-
-function Envelope({ id, spent, limit }: { id: string; spent: number; limit: number }) {
-    const pct = limit > 0 ? Math.min(1, spent / limit) : 0;
-    const over = spent > limit;
-    const color = over ? "#f2a5c0" : "#8da6ff";
-    const surfaceY = BODY_BOTTOM - BODY_H * pct;
-    return (
-        <svg viewBox="0 0 120 88" className="w-full" role="img" aria-label={`$${spent.toFixed(0)} of $${limit} spent`}>
-            <defs>
-                <clipPath id={`env-${id}`}>
-                    <rect x="4" y={BODY_TOP} width="112" height={BODY_H} rx="8" />
-                </clipPath>
-            </defs>
-            <g clipPath={`url(#env-${id})`}>
-                <motion.g initial={{ y: BODY_BOTTOM }} animate={{ y: surfaceY }} transition={{ type: "spring", stiffness: 55, damping: 16 }}>
-                    <path className="liquid-wave" d={WAVE_D} fill={color} opacity="0.3" />
-                    <g transform="translate(0 2)">
-                        <path className="liquid-wave-2" d={WAVE_D} fill={color} opacity="0.5" />
-                    </g>
-                </motion.g>
-            </g>
-            <rect x="4" y={BODY_TOP} width="112" height={BODY_H} rx="8" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" />
-            <path
-                d={`M6 ${BODY_TOP + 4} L60 ${BODY_TOP + 32} L114 ${BODY_TOP + 4}`}
-                fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"
-            />
-            <text x="60" y="68" textAnchor="middle" fontSize="10" fontWeight="600" fill="rgba(255,255,255,0.92)">
-                {`$${spent.toFixed(0)} / $${limit.toLocaleString()}`}
-            </text>
-        </svg>
     );
 }
 
@@ -118,7 +75,7 @@ function AccountForm({ account, onDone }: { account: Account | null; onDone: () 
                 <label htmlFor="acc-balance" className={LABEL}>{account ? "Balance" : "Initial Balance"}</label>
                 <input id="acc-balance" name="balance" type="number" step="0.01" defaultValue={account?.balance ?? 0} placeholder="0.00" className={INPUT} />
             </div>
-            {err && <p className="text-xs text-rose-400">{err}</p>}
+            {err && <p className="text-xs text-[#f2a86f]">{err}</p>}
             <SubmitButton>{account ? "Save Changes" : "Add Account"}</SubmitButton>
         </form>
     );
@@ -136,7 +93,7 @@ function TxnForm({ accounts, budgets, onDone }: { accounts: Account[]; budgets: 
     ];
 
     if (accounts.length === 0) {
-        return <p className="text-sm text-zinc-500 italic mt-2">Create an account first — transactions need one to draw from.</p>;
+        return <p className="text-sm text-[#868da0] italic mt-2">Create an account first — transactions need one to draw from.</p>;
     }
 
     return (
@@ -159,10 +116,10 @@ function TxnForm({ accounts, budgets, onDone }: { accounts: Account[]; budgets: 
                     <button
                         type="button"
                         onClick={() => setKind("expense")}
-                        className={`py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        className={`neu-btn py-2 rounded-[13px] text-sm font-semibold ${
                             kind === "expense"
-                                ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
-                                : "bg-white/[0.04] text-zinc-500 border-white/[0.08] hover:text-zinc-300"
+                                ? "text-[#f2a86f] [box-shadow:inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-3px_-3px_7px_rgba(255,255,255,0.035)]"
+                                : "text-[#868da0] hover:text-[#d3d7e0]"
                         }`}
                     >
                         − Expense
@@ -170,10 +127,10 @@ function TxnForm({ accounts, budgets, onDone }: { accounts: Account[]; budgets: 
                     <button
                         type="button"
                         onClick={() => setKind("income")}
-                        className={`py-2 rounded-lg text-sm font-medium border transition-colors ${
+                        className={`neu-btn py-2 rounded-[13px] text-sm font-semibold ${
                             kind === "income"
-                                ? "bg-green-500/15 text-green-400 border-green-500/30"
-                                : "bg-white/[0.04] text-zinc-500 border-white/[0.08] hover:text-zinc-300"
+                                ? "text-[#6fd6c3] [box-shadow:inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-3px_-3px_7px_rgba(255,255,255,0.035)]"
+                                : "text-[#868da0] hover:text-[#d3d7e0]"
                         }`}
                     >
                         + Income
@@ -204,7 +161,7 @@ function TxnForm({ accounts, budgets, onDone }: { accounts: Account[]; budgets: 
                 <input type="hidden" name="date" value={date} />
                 <WheelDatePicker value={date} onChange={setDate} placeholder="Pick a date" />
             </div>
-            {err && <p className="text-xs text-rose-400">{err}</p>}
+            {err && <p className="text-xs text-[#f2a86f]">{err}</p>}
             <SubmitButton>Add Transaction</SubmitButton>
         </form>
     );
@@ -229,10 +186,10 @@ function BudgetForm({ budget, onDone }: { budget: Budget | null; onDone: () => v
                 <input id="budget-category" name="category" type="text" required defaultValue={budget?.category} placeholder="e.g. Food" className={INPUT} />
             </div>
             <div>
-                <label htmlFor="budget-limit" className={LABEL}>Fund Limit <span className="text-zinc-600">(envelope is full at this amount)</span></label>
+                <label htmlFor="budget-limit" className={LABEL}>Fund Limit <span className="text-[#5c6270]">(envelope is full at this amount)</span></label>
                 <input id="budget-limit" name="limit_amount" type="number" step="0.01" min="0" required defaultValue={budget?.limit_amount} placeholder="500.00" className={INPUT} />
             </div>
-            {err && <p className="text-xs text-rose-400">{err}</p>}
+            {err && <p className="text-xs text-[#f2a86f]">{err}</p>}
             <SubmitButton>{budget ? "Save Changes" : "Create Category"}</SubmitButton>
         </form>
     );
@@ -277,137 +234,179 @@ export function FinanceDashboard({ accounts, transactions, budgets }: {
     };
 
     return (
-        <div className="max-w-2xl mx-auto py-8 space-y-8">
+        <div className="flex flex-col gap-6 py-8 [animation:paneIn_320ms_cubic-bezier(0.23,1,0.32,1)_both]">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-                <h1 className="text-2xl font-bold italic text-zinc-50">Finance</h1>
-                <div className="flex gap-2">
-                    <button type="button" onClick={() => setAccModal("new")} className={HEADER_BTN}>+ Add Account</button>
-                    <button type="button" onClick={() => setTxnOpen(true)} className={HEADER_BTN}>+ Add Transaction</button>
+                <h1 className="text-[25px] font-semibold tracking-[-0.01em] text-[#eceef3]">Finance</h1>
+                <div className="flex gap-3">
+                    <button type="button" onClick={() => setAccModal("new")} className="neu-btn px-5 py-3 rounded-[15px] text-[#868da0] text-[13px] font-semibold">+ Account</button>
+                    <button type="button" onClick={() => setTxnOpen(true)} className="neu-btn px-5 py-3 rounded-[15px] text-[#6fd6c3] text-[13px] font-semibold">+ Transaction</button>
                 </div>
             </div>
             {insight && (
-                <div className="mt-3 flex items-center gap-2 text-sm">
-                    <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 italic">
-                        ✦ {insight}
-                    </span>
+                <div className="self-start inline-flex items-center gap-2 neu-inset px-4 py-2 rounded-[13px] text-[12.5px] italic text-[#6fd6c3]">
+                    ✦ {insight}
                 </div>
             )}
-            {delErr && <p className="text-xs text-rose-400">{delErr}</p>}
+            {delErr && <p className="text-xs text-[#f2a86f]">{delErr}</p>}
 
             {/* Accounts */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-[22px]">
                 {accounts.length === 0 && (
-                    <p className="col-span-2 italic text-zinc-500 text-sm">No accounts yet — add one to start tracking.</p>
+                    <p className="col-span-full italic text-[#868da0] text-sm">No accounts yet — add one to start tracking.</p>
                 )}
                 {accounts.map((acc) => (
-                    <GlassCard key={acc.id} className="p-4 relative">
-                        <div className="absolute right-3 top-3 flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setAccModal(acc)}
-                                className="text-zinc-600 hover:text-zinc-300 transition-colors"
-                                aria-label={`Edit ${acc.name}`}
-                            >
-                                <EditIcon />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { setDelErr(null); setConfirmDel({ kind: "account", id: acc.id, name: acc.name }); }}
-                                className="text-zinc-600 hover:text-rose-400 transition-colors"
-                                aria-label={`Delete ${acc.name}`}
-                            >
-                                <DeleteIcon />
-                            </button>
+                    <GlassCard key={acc.id} className={`group rounded-[22px] px-6 py-[22px] ${CARD_HOVER}`}>
+                        <div className="flex items-center justify-between gap-2.5">
+                            <span className="min-w-0 truncate text-[13px] text-[#868da0]">{acc.name}</span>
+                            <span className="flex flex-none items-center gap-2">
+                                <span className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAccModal(acc)}
+                                        className="text-[#868da0] hover:text-[#d3d7e0] transition-colors"
+                                        aria-label={`Edit ${acc.name}`}
+                                    >
+                                        <EditIcon />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setDelErr(null); setConfirmDel({ kind: "account", id: acc.id, name: acc.name }); }}
+                                        className="text-[#868da0] hover:text-[#f2a86f] transition-colors"
+                                        aria-label={`Delete ${acc.name}`}
+                                    >
+                                        <DeleteIcon />
+                                    </button>
+                                </span>
+                                <span
+                                    className="h-[9px] w-[9px] flex-none rounded-full"
+                                    style={{
+                                        background: acc.type === "investment" ? "#f2a86f" : "#6fd6c3",
+                                        boxShadow: `0 0 8px ${acc.type === "investment" ? "rgba(242,168,111,0.6)" : "rgba(111,214,195,0.6)"}`,
+                                    }}
+                                />
+                            </span>
                         </div>
-                        <p className="text-sm text-zinc-500 pr-14 truncate">{acc.name}</p>
-                        <p className="text-xl font-bold text-zinc-50">${acc.balance.toLocaleString()}</p>
-                        <p className="text-xs text-zinc-500 mt-1 capitalize">{acc.type}</p>
+                        <p className="mt-[9px] text-2xl font-bold tabular-nums text-[#f0f2f6]">${acc.balance.toLocaleString()}</p>
+                        <p className="mt-[5px] text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5c6270]">{acc.type}</p>
                     </GlassCard>
                 ))}
             </div>
 
-            {/* Budget category envelopes */}
-            <div className="space-y-3">
+            {/* Budget envelopes */}
+            <GlassCard className="rounded-[26px] px-[30px] py-[26px]">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-zinc-50">Categories</h2>
-                    <button type="button" onClick={() => setBudgetModal("new")} className={HEADER_BTN}>+ Add Category</button>
+                    <h2 className="text-base font-semibold text-[#e3e6ec]">Budget envelopes</h2>
+                    <button type="button" onClick={() => setBudgetModal("new")} className={HEADER_BTN}>+ Category</button>
                 </div>
                 {budgets.length === 0 ? (
-                    <p className="italic text-zinc-500 text-sm">No categories yet — create an envelope to start budgeting.</p>
+                    <p className="mt-4 italic text-[#868da0] text-sm">No categories yet — create an envelope to start budgeting.</p>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-[22px]">
                         {budgets.map((b) => {
                             const spent = spendByCategory(b.category);
                             const over = spent > b.limit_amount;
-                            const pct = b.limit_amount > 0 ? Math.round((spent / b.limit_amount) * 100) : 0;
+                            const pct = b.limit_amount > 0 ? Math.min(1, spent / b.limit_amount) : 0;
                             return (
-                                <GlassCard key={b.id} className="p-4">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <p className="text-sm text-zinc-50 truncate">{b.category}</p>
-                                        <div className="flex gap-2 shrink-0">
-                                            <button
-                                                type="button"
-                                                onClick={() => setBudgetModal(b)}
-                                                className="text-zinc-600 hover:text-zinc-300 transition-colors"
-                                                aria-label={`Edit ${b.category} category`}
-                                            >
-                                                <EditIcon />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => { setDelErr(null); setConfirmDel({ kind: "category", id: b.id, name: b.category }); }}
-                                                className="text-zinc-600 hover:text-rose-400 transition-colors"
-                                                aria-label={`Delete ${b.category} category`}
-                                            >
-                                                <DeleteIcon />
-                                            </button>
+                                <div key={b.id} className="group">
+                                    <div className="neu-inset relative h-[110px] overflow-hidden rounded-[18px]">
+                                        <div
+                                            className="absolute inset-x-0 bottom-0 transition-[height] duration-[600ms] [transition-timing-function:cubic-bezier(0.23,1,0.32,1)]"
+                                            style={{
+                                                height: `${Math.round(pct * 100)}%`,
+                                                background: over
+                                                    ? "linear-gradient(180deg, rgba(242,168,111,0.45), rgba(242,168,111,0.22))"
+                                                    : "linear-gradient(180deg, rgba(111,214,195,0.34), rgba(111,214,195,0.16))",
+                                            }}
+                                        />
+                                        <div className="relative flex items-start justify-between px-4 py-3.5">
+                                            <div className="min-w-0">
+                                                <p
+                                                    className="truncate text-[13.5px] font-semibold"
+                                                    style={{
+                                                        color: pct > 0.5 ? "#f5f7fa" : "#e3e6ec",
+                                                        textShadow: pct > 0.5 ? "0 1px 3px rgba(0,0,0,0.55)" : "none",
+                                                    }}
+                                                >
+                                                    {b.category}
+                                                </p>
+                                                <p
+                                                    className="mt-[3px] text-[11.5px] tabular-nums"
+                                                    style={{
+                                                        color: pct > 0.5 ? "rgba(245,247,250,0.88)" : "#868da0",
+                                                        textShadow: pct > 0.5 ? "0 1px 3px rgba(0,0,0,0.55)" : "none",
+                                                    }}
+                                                >
+                                                    ${spent.toFixed(0)} spent
+                                                </p>
+                                            </div>
+                                            <span className="flex flex-none gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setBudgetModal(b)}
+                                                    className="text-[#868da0] hover:text-[#d3d7e0] transition-colors"
+                                                    aria-label={`Edit ${b.category} category`}
+                                                >
+                                                    <EditIcon />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setDelErr(null); setConfirmDel({ kind: "category", id: b.id, name: b.category }); }}
+                                                    className="text-[#868da0] hover:text-[#f2a86f] transition-colors"
+                                                    aria-label={`Delete ${b.category} category`}
+                                                >
+                                                    <DeleteIcon />
+                                                </button>
+                                            </span>
                                         </div>
                                     </div>
-                                    <Envelope id={b.id} spent={spent} limit={b.limit_amount} />
-                                    <div className="flex justify-between text-xs mt-1">
-                                        <span className={over ? "text-amber-400" : "text-zinc-500"}>
-                                            {over ? `over by $${(spent - b.limit_amount).toFixed(0)}` : `${pct}% full`}
+                                    <div className="mt-2 flex justify-between px-1 text-[11.5px] tabular-nums">
+                                        <span className={`font-semibold ${over ? "text-[#f2a86f]" : "text-[#868da0]"}`}>
+                                            {over ? `over by $${(spent - b.limit_amount).toFixed(0)}` : `${Math.round(pct * 100)}% used`}
                                         </span>
-                                        <span className="text-zinc-500">limit ${b.limit_amount.toLocaleString()}</span>
+                                        <span className="text-[#5c6270]">limit ${b.limit_amount.toLocaleString()}</span>
                                     </div>
-                                </GlassCard>
+                                </div>
                             );
                         })}
                     </div>
                 )}
-            </div>
+            </GlassCard>
 
             {/* Transactions */}
-            <div className="space-y-3">
-                <h2 className="text-lg font-bold text-zinc-50">Recent Transactions</h2>
+            <GlassCard className="rounded-[26px] px-[30px] py-[26px]">
+                <h2 className="text-base font-semibold text-[#e3e6ec]">Recent transactions</h2>
                 {sorted.length === 0 ? (
-                    <p className="italic text-zinc-500 text-sm">No transactions this month</p>
+                    <p className="mt-3.5 italic text-[#868da0] text-sm">No transactions this month</p>
                 ) : (
-                    <div className="space-y-1">
+                    <div className="mt-3.5 flex flex-col gap-1.5">
                         {sorted.map((t) => (
-                            <GlassCard key={t.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-sm text-zinc-50 truncate">{t.description || t.category}</p>
-                                    <p className="text-xs text-zinc-500">{t.category} · {fmtDate(t.date)}</p>
+                            <div key={t.id} className="group flex items-center gap-[15px] rounded-[14px] px-1 py-[9px] transition-colors hover:bg-white/[0.025]">
+                                <div
+                                    className="neu-pill flex h-10 w-10 flex-none items-center justify-center rounded-[13px] text-sm font-bold"
+                                    style={{ color: t.amount >= 0 ? "#6fd6c3" : "#868da0" }}
+                                >
+                                    {(t.description || t.category).charAt(0).toUpperCase()}
                                 </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                    <span className={`text-sm font-semibold tabular-nums ${t.amount >= 0 ? "text-green-400" : "text-rose-400"}`}>
-                                        {t.amount >= 0 ? "+" : ""}${Math.abs(t.amount).toFixed(2)}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => { setDelErr(null); setConfirmDel({ kind: "transaction", id: t.id, name: t.description || t.category }); }}
-                                        className="text-zinc-600 hover:text-rose-400 transition-colors"
-                                        aria-label="Delete transaction"
-                                    >
-                                        <DeleteIcon />
-                                    </button>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-[13.5px] font-semibold text-[#d3d7e0]">{t.description || t.category}</p>
+                                    <p className="mt-px text-xs text-[#868da0]">{t.category} · {fmtDate(t.date)}</p>
                                 </div>
-                            </GlassCard>
+                                <span className={`flex-none text-sm font-semibold tabular-nums ${t.amount >= 0 ? "text-[#6fd6c3]" : "text-[#c3c8d4]"}`}>
+                                    {t.amount >= 0 ? "+" : "−"}${Math.abs(t.amount).toFixed(2)}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => { setDelErr(null); setConfirmDel({ kind: "transaction", id: t.id, name: t.description || t.category }); }}
+                                    className="flex-none text-[#868da0] opacity-0 transition-opacity hover:text-[#f2a86f] group-hover:opacity-100"
+                                    aria-label="Delete transaction"
+                                >
+                                    <DeleteIcon />
+                                </button>
+                            </div>
                         ))}
                     </div>
                 )}
-            </div>
+            </GlassCard>
 
             {/* Add Transaction */}
             <GlassModal open={txnOpen} onOpenChange={setTxnOpen} title="Add Transaction">

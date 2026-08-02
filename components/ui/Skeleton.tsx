@@ -1,6 +1,6 @@
 // Shimmering placeholder block. Native Tailwind animate-pulse — no deps.
 export function Skeleton({ className = "" }: { className?: string }) {
-    return <div className={`animate-pulse rounded-xl bg-white/[0.06] ${className}`} />;
+    return <div className={`animate-pulse rounded-xl bg-black/25 ${className}`} />;
 }
 
 // A glass card full of skeleton lines — the common shape across dashboard tabs.

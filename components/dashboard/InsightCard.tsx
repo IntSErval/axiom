@@ -11,10 +11,10 @@ export interface Insight {
 }
 
 const DOMAIN_COLOR: Record<Insight["domain"], string> = {
-    tasks: "text-blue-400",
-    habits: "text-amber-400",
-    finance: "text-green-400",
-    coach: "text-violet-400",
+    tasks: "text-[#6fd6c3]",
+    habits: "text-[#f2a86f]",
+    finance: "text-[#6fd6c3]",
+    coach: "text-[#f2a86f]",
 };
 
 const SNOOZE_MS = { "1h": 3_600_000, "1d": 86_400_000, "1w": 604_800_000 } as const;
@@ -27,12 +27,12 @@ interface Props {
 
 export function InsightCard({ insight, onDismiss, onSnooze }: Props) {
     return (
-        <div className="relative w-80 backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 shadow-lg">
+        <div className="glass relative w-80 rounded-[20px] p-4">
             <button
                 type="button"
                 aria-label="Dismiss"
                 onClick={() => onDismiss(insight.id)}
-                className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-50 transition-colors text-sm leading-none"
+                className="absolute top-3 right-3 text-[#868da0] hover:text-[#d3d7e0] transition-colors text-sm leading-none"
             >
                 ✕
             </button>
@@ -41,7 +41,7 @@ export function InsightCard({ insight, onDismiss, onSnooze }: Props) {
                 {insight.domain}
             </span>
 
-            <p className="text-sm text-zinc-50 mt-1 pr-5">{insight.message}</p>
+            <p className="text-sm text-[#d3d7e0] mt-1 pr-5">{insight.message}</p>
 
             {insight.href && (
                 <Link
@@ -68,7 +68,7 @@ export function InsightCard({ insight, onDismiss, onSnooze }: Props) {
                         key={label}
                         type="button"
                         onClick={() => onSnooze(insight.id, Date.now() + SNOOZE_MS[label])}
-                        className="text-xs text-zinc-500 hover:text-zinc-50 transition-colors"
+                        className="text-xs text-[#868da0] hover:text-[#d3d7e0] transition-colors"
                     >
                         {label}
                     </button>

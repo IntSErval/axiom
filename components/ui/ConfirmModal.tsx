@@ -21,12 +21,12 @@ export function ConfirmModal({
 
     return (
         <GlassModal open={open} onOpenChange={onOpenChange} title={title}>
-            <p className="text-sm text-white/60 mb-5">{message}</p>
+            <p className="text-sm text-[#868da0] mb-5">{message}</p>
             <div className="flex justify-end gap-3">
                 <button
                     type="button"
                     onClick={() => onOpenChange(false)}
-                    className="px-4 py-2 rounded-xl text-sm text-zinc-400 border border-white/[0.08] hover:bg-white/[0.05] hover:text-zinc-50 transition-colors"
+                    className="neu-btn px-4 py-2 rounded-[13px] text-sm font-semibold text-[#868da0] hover:text-[#d3d7e0]"
                 >
                     Cancel
                 </button>
@@ -42,7 +42,7 @@ export function ConfirmModal({
                             onOpenChange(false);
                         }
                     }}
-                    className="px-4 py-2 rounded-xl text-sm bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30 transition-[background-color,transform] duration-150 active:scale-[0.97] disabled:opacity-50"
+                    className="neu-btn px-4 py-2 rounded-[13px] text-sm font-semibold text-[#f2a86f] disabled:opacity-50"
                 >
                     {busy ? "Working..." : confirmLabel}
                 </button>

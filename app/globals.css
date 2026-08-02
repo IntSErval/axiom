@@ -1,27 +1,33 @@
 @import "tailwindcss";
 
+/* ── Neumorphism design system ───────────────────────────────────────────────
+   Imported from the "Dashboard redesign: neumorphism style" claude.ai/design
+   project (2026-08-02). Supersedes the old liquid-glass / zinc palette.
+   Base surface #26292f, cards raised with dual (light-top / dark-bottom)
+   shadows, wells inset. Accents: teal #6fd6c3 (cool) + orange #f2a86f (warm). */
+
 @theme {
-  --color-background: #07080d;
-  --color-surface: rgba(255, 255, 255, 0.05);
-  --color-border-glass: rgba(255, 255, 255, 0.1);
+  --color-background: #26292f;
+  --color-surface: #24272d;
+  --color-border-glass: rgba(255, 255, 255, 0.06);
 
-  --color-accent-primary: #8da6ff;
-  --color-accent-secondary: #a78bfa;
-  --color-accent-teal: #4fd8c8;
-  --color-success: #5fd9a4;
-  --color-warning: #f0c878;
+  --color-accent-primary: #6fd6c3; /* teal — interactive / positive */
+  --color-accent-secondary: #f2a86f; /* orange — streaks / warnings */
+  --color-accent-teal: #6fd6c3;
+  --color-success: #6fd6c3;
+  --color-warning: #f2a86f;
 
-  --color-text-primary: rgba(255, 255, 255, 0.92);
-  --color-text-muted: rgba(255, 255, 255, 0.45);
+  --color-text-primary: #d3d7e0;
+  --color-text-muted: #868da0;
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-outfit);
   --font-mono: var(--font-geist-mono);
 }
 
 @layer base {
   body {
-    background-color: var(--color-background);
-    color: var(--color-text-primary);
+    background-color: #26292f;
+    color: #d3d7e0;
   }
 
   html {
@@ -29,32 +35,40 @@
     color-scheme: dark;
   }
 
-  /* Native select dropdowns render white without an explicit dark option bg */
+  a {
+    color: #6fd6c3;
+    text-decoration: none;
+  }
+  a:hover {
+    color: #8fe4d4;
+  }
+
   select option {
-    background-color: #12141c;
-    color: rgba(255, 255, 255, 0.92);
+    background-color: #24272d;
+    color: #d3d7e0;
   }
 
   ::selection {
-    background: rgba(120, 160, 255, 0.3);
+    background: rgba(111, 214, 195, 0.28);
   }
 
   :focus-visible {
-    outline: 2px solid rgba(141, 166, 255, 0.7);
+    outline: 2px solid rgba(111, 214, 195, 0.7);
     outline-offset: 2px;
   }
 
   input::placeholder,
   textarea::placeholder {
-    color: rgba(255, 255, 255, 0.28);
+    color: #5c6270;
   }
 
   ::-webkit-scrollbar {
-    width: 5px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -62,57 +76,50 @@
 }
 
 @layer components {
-  /* Liquid glass card — imported from the Productivity Dashboard claude.ai/design project */
+  /* Raised neu surface — this is the primitive GlassCard/Panel/Modal wrap.
+     Kept named `.glass` so every existing consumer flips to neu at once. */
   .glass {
     position: relative;
     border-radius: 26px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(28px) saturate(170%);
-    -webkit-backdrop-filter: blur(28px) saturate(170%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(145deg, #2a2e36, #22252a);
+    border: none;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.15),
-      inset 0 0 30px rgba(255, 255, 255, 0.025),
-      0 26px 60px rgba(0, 0, 0, 0.5);
-  }
-  .glass::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(125deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0) 32%);
-    pointer-events: none;
+      -10px -10px 24px rgba(255, 255, 255, 0.05),
+      12px 12px 28px rgba(0, 0, 0, 0.55);
   }
 
-  /* Ambient background bubbles */
-  .bubble {
-    position: fixed;
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 0;
+  /* Inset well — inputs, progress tracks, sunken chips */
+  .neu-inset {
+    background: #24272d;
+    box-shadow:
+      inset 4px 4px 10px rgba(0, 0, 0, 0.5),
+      inset -4px -4px 10px rgba(255, 255, 255, 0.04);
   }
-  .bubble-a {
-    top: -20%;
-    right: -14%;
-    width: 58vw;
-    height: 58vw;
-    background: radial-gradient(circle at 38% 38%, rgba(72, 132, 255, 0.5), rgba(142, 72, 255, 0.22) 55%, rgba(0, 0, 0, 0) 72%);
-    animation: bubbleA 30s ease-in-out infinite alternate, hueA 24s linear infinite;
+
+  /* Raised pressable button — presses to inset on :active */
+  .neu-btn {
+    border: none;
+    background: linear-gradient(145deg, #2a2e36, #22252a);
+    box-shadow:
+      -4px -4px 10px rgba(255, 255, 255, 0.05),
+      6px 6px 14px rgba(0, 0, 0, 0.5);
+    transition:
+      transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+      box-shadow 200ms cubic-bezier(0.23, 1, 0.32, 1),
+      color 200ms ease;
   }
-  .bubble-b {
-    bottom: -24%;
-    left: -16%;
-    width: 66vw;
-    height: 66vw;
-    background: radial-gradient(circle at 60% 45%, rgba(70, 210, 220, 0.4), rgba(100, 80, 255, 0.2) 55%, rgba(0, 0, 0, 0) 72%);
-    animation: bubbleB 36s ease-in-out infinite alternate, hueB 30s linear infinite;
+  .neu-btn:active {
+    box-shadow:
+      inset 4px 4px 9px rgba(0, 0, 0, 0.55),
+      inset -4px -4px 9px rgba(255, 255, 255, 0.04);
+    transform: scale(0.96);
   }
-  @media (prefers-reduced-motion: reduce) {
-    .bubble-a,
-    .bubble-b {
-      animation: none;
-      filter: blur(100px);
-    }
+
+  /* Small raised pill (badges, chip counts) */
+  .neu-pill {
+    box-shadow:
+      inset 3px 3px 7px rgba(0, 0, 0, 0.42),
+      inset -3px -3px 7px rgba(255, 255, 255, 0.035);
   }
 
   /* Wheel date picker columns (WheelDatePicker.tsx) */
@@ -124,49 +131,20 @@
   .wheel-col::-webkit-scrollbar {
     display: none;
   }
-
-  /* Liquid envelope fill (finance budget categories) */
-  .liquid-wave {
-    animation: liquid-drift 3.4s linear infinite;
-  }
-  .liquid-wave-2 {
-    animation: liquid-drift 5.2s linear infinite reverse;
-  }
-  @keyframes liquid-drift {
-    to {
-      transform: translateX(-40px);
-    }
-  }
-
-  /* Bento tilt: dim + blur siblings of the hovered card */
-  @media (hover: hover) and (pointer: fine) {
-    .bento:has([data-tilt]:hover) [data-tilt]:not(:hover) {
-      filter: blur(2.5px) saturate(0.85);
-      opacity: 0.72;
-    }
-  }
-  .bento [data-tilt] {
-    transition: filter 0.5s ease, opacity 0.5s ease;
-  }
 }
 
-@keyframes bubbleA {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-7vw, 6vh) scale(1.14); }
-  100% { transform: translate(4vw, -4vh) scale(0.94); }
+@keyframes checkdraw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
 }
-@keyframes bubbleB {
-  0% { transform: translate(0, 0) scale(1.06); }
-  50% { transform: translate(6vw, -5vh) scale(0.92); }
-  100% { transform: translate(-3vw, 4vh) scale(1.12); }
+@keyframes paneIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
 }
-@keyframes hueA {
-  0% { filter: blur(95px) hue-rotate(-45deg); }
-  50% { filter: blur(95px) hue-rotate(65deg); }
-  100% { filter: blur(95px) hue-rotate(-45deg); }
-}
-@keyframes hueB {
-  0% { filter: blur(110px) hue-rotate(60deg); }
-  50% { filter: blur(110px) hue-rotate(-40deg); }
-  100% { filter: blur(110px) hue-rotate(60deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

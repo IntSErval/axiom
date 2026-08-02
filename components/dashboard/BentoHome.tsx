@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { updateTaskStatus, createTask } from "@/app/dashboard/tasks/actions";
 import { logHabit } from "@/app/dashboard/habits/actions";
-import { ParticleBrain } from "@/components/background/ParticleBrain";
+import { NotchRing, CheckBox } from "@/components/ui/neu";
 
-// Bento-grid dashboard home, ported from the Productivity Dashboard claude.ai/design project
-// and wired to live AXIOM data via existing server actions.
+// Neumorphic bento home — ported from the "Dashboard redesign: neumorphism style"
+// claude.ai/design project and wired to live AXIOM data via existing server actions.
 
 export interface BentoTask { id: string; title: string; priority: 1 | 2 | 3 | 4; status: string; due_date: string | null }
 export interface BentoData {
@@ -14,23 +15,24 @@ export interface BentoData {
         total: number;
         income: number;
         spending: number;
-        spark: number[];
+        bars: { month: string; income: number; spending: number }[];
         transactions: { id: string; description: string; category: string; date: string; amount: number }[];
     };
-    habits: { id: string; name: string; streak: number; week: number; done: boolean }[];
+    habits: { id: string; name: string; streak: number; done: boolean }[];
+    heat: number[];
     goals: { id: string; title: string; pct: number; current: string; target: string; deadline: string | null }[];
     tasks: BentoTask[];
     today: BentoTask[];
 }
 
-const ACCENTS = ["#4fd8c8", "#8da6ff", "#a78bfa", "#5fd9a4", "#f2a5c0"];
-const PRIO_DOT: Record<number, string> = {
-    1: "rgba(242,140,140,0.8)",
-    2: "rgba(240,200,120,0.7)",
-    3: "rgba(141,166,255,0.5)",
-    4: "rgba(255,255,255,0.18)",
-};
-const LABEL = "text-[11px] font-semibold uppercase tracking-[0.14em] text-white/45";
+const COOL = "#6fd6c3";
+const WARM = "#f2a86f";
+const TX_COLORS = ["#6fd6c3", "#f2a86f", "#8fe4d4", "#c8813f", "#5fd9a4"];
+
+const CARD =
+    "glass p-7 transition-[transform,box-shadow] duration-200 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] " +
+    "hover:-translate-y-[3px] hover:[box-shadow:-12px_-12px_30px_rgba(255,255,255,0.055),16px_16px_36px_rgba(0,0,0,0.62)]";
+const H = "text-base font-semibold text-[#e3e6ec]";
 
 function money(n: number) {
     return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -39,225 +41,135 @@ function fmtDay(d: string) {
     return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function tiltAllowed() {
-    return window.matchMedia("(hover: hover) and (pointer: fine)").matches
-        && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function TiltCard({ className = "", children }: { className?: string; children: React.ReactNode }) {
-    const ref = useRef<HTMLElement>(null);
-    return (
-        <section
-            ref={ref}
-            data-tilt
-            className={`glass flex flex-col overflow-hidden p-6 ${className}`}
-            onMouseMove={(e) => {
-                const el = ref.current;
-                if (!el || !tiltAllowed()) return;
-                const r = el.getBoundingClientRect();
-                const px = (e.clientX - r.left) / r.width - 0.5;
-                const py = (e.clientY - r.top) / r.height - 0.5;
-                el.style.transform = `perspective(1100px) rotateX(${(-py * 4.5).toFixed(2)}deg) rotateY(${(px * 6.5).toFixed(2)}deg) translateY(-5px) scale(1.012)`;
-            }}
-            onMouseEnter={() => {
-                const el = ref.current;
-                if (!el || !tiltAllowed()) return;
-                el.style.transition = "transform .16s ease-out, filter .5s ease, opacity .5s ease";
-                el.style.zIndex = "5";
-            }}
-            onMouseLeave={() => {
-                const el = ref.current;
-                if (!el) return;
-                el.style.transition = "transform .7s cubic-bezier(.22,1,.36,1), filter .5s ease, opacity .5s ease";
-                el.style.transform = "perspective(1100px) rotateX(0deg) rotateY(0deg) translateY(0) scale(1)";
-                el.style.zIndex = "";
-            }}
-        >
-            {children}
-        </section>
-    );
-}
-
-function Sparkline({ values }: { values: number[] }) {
-    const v = values.length >= 2 ? values : [0, 0];
-    const min = Math.min(...v), max = Math.max(...v);
-    const span = max - min || 1;
-    const pts = v.map((y, i) => `${(i * 260 / (v.length - 1)).toFixed(1)},${(60 - ((y - min) / span) * 51).toFixed(1)}`);
-    const last = pts[pts.length - 1].split(",");
-    return (
-        <svg viewBox="0 0 260 70" className="mt-6 h-[76px] w-full overflow-visible">
-            <polygon points={`${pts.join(" ")} 260,70 0,70`} fill="rgba(120,170,255,0.12)" />
-            <polyline points={pts.join(" ")} fill="none" stroke="rgba(130,175,255,0.9)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx={last[0]} cy={last[1]} r="4" fill="#a5c6ff" />
-        </svg>
-    );
-}
-
-function FinanceCard({ finance }: { finance: BentoData["finance"] }) {
-    const [view, setView] = useState<"ov" | "tx">("ov");
+/* ── Balance + 6-month bars ────────────────────────────────────────────────── */
+function BalanceCard({ finance }: { finance: BentoData["finance"] }) {
     const [int, dec] = money(finance.total).split(".");
-    if (view === "tx") {
-        return (
-            <div className="flex h-full flex-col">
-                <div className="flex items-center gap-2.5">
-                    <button
-                        onClick={() => setView("ov")}
-                        className="h-[30px] w-[30px] cursor-pointer rounded-[10px] border border-white/[0.12] bg-white/[0.06] text-[15px] text-white/80 transition-colors hover:bg-white/[0.12]"
-                        aria-label="Back to overview"
-                    >‹</button>
-                    <span className={LABEL}>Transactions</span>
+    const net = finance.income - finance.spending;
+    const max = Math.max(1, ...finance.bars.flatMap((b) => [b.income, b.spending]));
+    return (
+        <>
+            <div className="flex items-start justify-between gap-5">
+                <div>
+                    <div className="text-[13px] font-medium text-[#868da0]">Total balance</div>
+                    <div className="mt-1 text-[46px] font-bold leading-none tracking-[-0.02em] tabular-nums text-[#f0f2f6]">
+                        ${int}<span className="text-[26px] text-[#868da0]">.{dec}</span>
+                    </div>
+                    <div className="neu-pill mt-2.5 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12.5px] font-semibold" style={{ color: net >= 0 ? COOL : WARM }}>
+                        {net >= 0 ? "▲" : "▼"} {net >= 0 ? "saved" : "over by"} ${money(Math.abs(net))} this month
+                    </div>
                 </div>
-                <div className="-mr-2 mt-4 flex flex-1 flex-col gap-1.5 overflow-y-auto pr-2">
-                    {finance.transactions.length === 0 && <p className="text-sm text-white/40">No transactions yet.</p>}
-                    {finance.transactions.map((t) => (
-                        <div key={t.id} className="flex items-center justify-between rounded-[14px] px-3 py-2.5 transition-colors hover:bg-white/[0.05]">
-                            <div className="min-w-0">
-                                <div className="truncate text-[13.5px] font-medium">{t.description}</div>
-                                <div className="mt-0.5 text-[11px] text-white/40">{t.category} · {fmtDay(t.date)}</div>
-                            </div>
-                            <span className={`text-[13.5px] font-semibold ${t.amount > 0 ? "text-[#5fd9a4]" : "text-white/80"}`}>
-                                {t.amount > 0 ? "+" : "−"}${money(Math.abs(t.amount))}
-                            </span>
+                <div className="flex flex-col gap-3">
+                    {([["Income", finance.income, COOL], ["Spending", finance.spending, WARM]] as const).map(([label, amt, color]) => (
+                        <div key={label} className="neu-inset flex items-center gap-2.5 rounded-[15px] px-4 py-3">
+                            <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: color, boxShadow: `0 0 8px ${color}99` }} />
+                            <span className="text-[13px] text-[#868da0]">{label}</span>
+                            <span className="ml-auto text-[15px] font-semibold tabular-nums text-[#e3e6ec]">${amt.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
                         </div>
                     ))}
                 </div>
             </div>
-        );
-    }
+            <div className="mt-7 flex h-[158px] items-end gap-0">
+                {finance.bars.map((b) => (
+                    <div key={b.month} className="flex flex-1 flex-col items-center justify-end gap-2.5" style={{ height: "100%" }}>
+                        <div className="flex flex-1 items-end gap-[7px]">
+                            <div title={`Income $${b.income.toFixed(0)}`} style={{ width: 17, height: Math.max(3, (b.income / max) * 132), borderRadius: "7px 7px 3px 3px", background: "linear-gradient(180deg, rgba(111,214,195,0.85), rgba(111,214,195,0.45))", boxShadow: "-2px -2px 5px rgba(255,255,255,0.04), 3px 3px 7px rgba(0,0,0,0.4)" }} />
+                            <div title={`Spending $${b.spending.toFixed(0)}`} style={{ width: 17, height: Math.max(3, (b.spending / max) * 132), borderRadius: "7px 7px 3px 3px", background: "linear-gradient(180deg, rgba(242,168,111,0.85), rgba(242,168,111,0.45))", boxShadow: "-2px -2px 5px rgba(255,255,255,0.04), 3px 3px 7px rgba(0,0,0,0.4)" }} />
+                        </div>
+                        <div className="text-[11.5px] font-medium text-[#5c6270]">{b.month}</div>
+                    </div>
+                ))}
+            </div>
+        </>
+    );
+}
+
+/* ── Goals rings ───────────────────────────────────────────────────────────── */
+function GoalsCard({ goals }: { goals: BentoData["goals"] }) {
     return (
-        <div className="flex h-full flex-col">
-            <div className="flex items-center justify-between">
-                <span className={LABEL}>Finance</span>
-                <span className="h-2 w-2 rounded-full bg-[rgba(120,170,255,0.9)] shadow-[0_0_12px_rgba(120,170,255,0.8)]" />
-            </div>
-            <div className="mt-5 text-[13px] text-white/50">Total balance</div>
-            <div className="mt-1 text-[42px] font-semibold leading-[1.1] tracking-[-1.5px]">
-                ${int}<span className="text-2xl text-white/50">.{dec}</span>
-            </div>
-            <Sparkline values={finance.spark} />
-            <div className="mt-5 grid grid-cols-2 gap-3">
-                {([["Income", finance.income, "linear-gradient(90deg,#5fd9a4,#4fc9d8)"], ["Spending", finance.spending, "linear-gradient(90deg,#a78bfa,#8da6ff)"]] as const).map(([label, amt, grad]) => {
-                    const denom = Math.max(finance.income, finance.spending) || 1;
-                    return (
-                        <div key={label} className="rounded-2xl border border-white/[0.07] bg-white/[0.04] p-3.5">
-                            <div className="text-[11px] text-white/45">{label}</div>
-                            <div className="mt-0.5 text-lg font-semibold">${amt.toLocaleString("en-US", { maximumFractionDigits: 0 })}</div>
-                            <div className="mt-2.5 h-1 overflow-hidden rounded-sm bg-white/[0.08]">
-                                <div className="h-full rounded-sm" style={{ width: `${Math.round((amt / denom) * 100)}%`, background: grad }} />
+        <>
+            <div className={H}>Goals</div>
+            <div className="mt-6 flex flex-wrap justify-between gap-3">
+                {goals.length === 0 && <p className="text-sm text-[#868da0]">No active goals.</p>}
+                {goals.slice(0, 3).map((g) => (
+                    <div key={g.id} className="flex min-w-[96px] flex-1 flex-col items-center gap-3 text-center">
+                        <div className="w-full max-w-[100px]" style={{ aspectRatio: "1" }}>
+                            <NotchRing pct={g.pct} size={100} label={`${g.pct}%`} />
+                        </div>
+                        <div>
+                            <div className="text-[13.5px] font-semibold text-[#d3d7e0]">{g.title}</div>
+                            <div className="mt-0.5 text-[11.5px] tabular-nums text-[#868da0]">{g.current} / {g.target}</div>
+                            <div className="mt-0.5 text-[11px]" style={{ color: g.deadline ? COOL : "#5c6270" }}>
+                                {g.deadline ? `by ${fmtDay(g.deadline)}` : "no deadline"}
                             </div>
                         </div>
-                    );
-                })}
+                    </div>
+                ))}
             </div>
-            <div className="flex-1" />
-            <button
-                onClick={() => setView("tx")}
-                className="mt-4 w-full cursor-pointer rounded-[14px] border border-white/[0.12] bg-white/[0.06] p-3 text-[13px] font-semibold text-white/85 transition-[background,transform] hover:-translate-y-px hover:bg-white/[0.11] active:scale-[0.98]"
-            >
-                View transactions →
-            </button>
-        </div>
+        </>
     );
 }
 
-function HabitsCard({ habits }: { habits: BentoData["habits"] }) {
+/* ── Habits list + heatmap ─────────────────────────────────────────────────── */
+const HEAT = [
+    { background: "rgba(0,0,0,0.22)", boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.4), inset -1px -1px 3px rgba(255,255,255,0.03)" },
+    { background: "rgba(111,214,195,0.22)" },
+    { background: "rgba(111,214,195,0.42)" },
+    { background: "rgba(111,214,195,0.68)" },
+    { background: COOL, boxShadow: "0 0 6px rgba(111,214,195,0.45)" },
+];
+
+function HabitsCard({ habits, heat }: { habits: BentoData["habits"]; heat: number[] }) {
     const router = useRouter();
     const [, startTransition] = useTransition();
-    // ponytail: optimistic mark-done — fills the ring instantly; router.refresh reconciles
-    const [optimisticHabits, markDone] = useOptimistic(
-        habits,
-        (state, id: string) => state.map((h) => (h.id === id ? { ...h, done: true, week: Math.min(h.week + 1, 7) } : h)),
-    );
+    const [optimistic, markDone] = useOptimistic(habits, (state, id: string) => state.map((h) => (h.id === id ? { ...h, done: true } : h)));
+    const done = optimistic.filter((h) => h.done).length;
+    const weeks = Math.round(heat.length / 7);
     return (
         <>
-            <div className="flex items-center justify-between">
-                <span className={LABEL}>Habits</span>
-                <span className="text-xs text-white/40">{optimisticHabits.filter(h => h.done).length} of {optimisticHabits.length} today</span>
+            <div className="flex items-baseline justify-between">
+                <div className={H}>Habits</div>
+                <div className="text-[12.5px] tabular-nums text-[#868da0]">{done} of {optimistic.length} today</div>
             </div>
-            <div className="mt-2 flex flex-1 flex-wrap items-center justify-around gap-2">
-                {optimisticHabits.length === 0 && <p className="text-sm text-white/40">No habits yet — add one in the Habits tab.</p>}
-                {optimisticHabits.map((h, i) => {
-                    const color = ACCENTS[i % ACCENTS.length];
-                    // ponytail: ring = completions in the last 7 days, matching the design; per-frequency targets when needed
-                    const dash = (Math.min(h.week / 7, 1) * 163.4).toFixed(1);
-                    return (
-                        <button
-                            key={h.id}
-                            title={h.done ? "Done today" : "Mark done today"}
+            <div className="mt-5 flex flex-col gap-3">
+                {optimistic.length === 0 && <p className="text-sm text-[#868da0]">No habits yet — add one in the Habits tab.</p>}
+                {optimistic.slice(0, 5).map((h) => (
+                    <div key={h.id} className="flex items-center gap-3">
+                        <CheckBox
+                            done={h.done}
+                            round
+                            label={h.name}
                             onClick={() => { if (!h.done) startTransition(async () => { markDone(h.id); await logHabit(h.id); router.refresh(); }); }}
-                            className="flex cursor-pointer flex-col items-center gap-2 rounded-[18px] border-none bg-transparent px-2.5 py-2 transition-[background,transform] hover:-translate-y-[3px] hover:bg-white/[0.05] active:scale-95"
-                        >
-                            <span className="relative block h-[62px] w-[62px]">
-                                <svg width="62" height="62" viewBox="0 0 62 62" className="block">
-                                    <circle cx="31" cy="31" r="26" fill="none" stroke="rgba(255,255,255,0.09)" strokeWidth="5" />
-                                    <circle cx="31" cy="31" r="26" fill="none" stroke={h.done ? color : "rgba(255,255,255,0.35)"} strokeWidth="5" strokeLinecap="round" strokeDasharray={`${dash} 163.4`} transform="rotate(-90 31 31)" style={{ transition: "stroke-dasharray .7s cubic-bezier(.34,1.4,.5,1), stroke .4s ease" }} />
-                                </svg>
-                                <span className="absolute inset-0 flex flex-col items-center justify-center text-base font-bold" style={{ color: h.done ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)" }}>
-                                    {h.streak}
-                                    <span className="-mt-px text-[8px] font-semibold uppercase tracking-[0.1em] text-white/35">day</span>
-                                </span>
-                            </span>
-                            <span className="text-xs font-medium" style={{ color: h.done ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.45)" }}>{h.name}</span>
-                            <span className="h-[5px] w-[5px] rounded-full" style={{ background: h.done ? color : "rgba(255,255,255,0.15)", boxShadow: h.done ? `0 0 8px ${color}` : "none" }} />
-                        </button>
-                    );
-                })}
+                        />
+                        <span className="min-w-0 truncate text-[13.5px] font-medium" style={{ color: h.done ? "#868da0" : "#d3d7e0" }}>{h.name}</span>
+                        <span className="neu-pill ml-auto flex-none rounded-[10px] px-2.5 py-1 text-[11.5px] font-semibold tabular-nums" style={{ color: WARM }}>{h.streak} d</span>
+                    </div>
+                ))}
+            </div>
+            <div className="mt-6">
+                <div className="mb-2.5 text-[12px] font-medium text-[#868da0]">Last {weeks} weeks</div>
+                <div className="overflow-x-auto" style={{ display: "grid", gridTemplateRows: "repeat(7, 12px)", gridAutoFlow: "column", gridAutoColumns: "12px", gap: 4.5 }}>
+                    {heat.map((c, i) => (
+                        <div key={i} style={{ width: 12, height: 12, borderRadius: 3.5, ...HEAT[c <= 0 ? 0 : Math.min(4, c)] }} />
+                    ))}
+                </div>
             </div>
         </>
     );
 }
 
-function GoalsCard({ goals }: { goals: BentoData["goals"] }) {
-    const [expanded, setExpanded] = useState<string | null>(null);
-    return (
-        <>
-            <span className={LABEL}>Goals</span>
-            <div className="-mr-2 mt-3.5 flex flex-1 flex-col gap-1 overflow-y-auto pr-2">
-                {goals.length === 0 && <p className="text-sm text-white/40">No active goals.</p>}
-                {goals.map((g, i) => {
-                    const color = ACCENTS[(i + 1) % ACCENTS.length];
-                    return (
-                        <div key={g.id} className="rounded-[14px] transition-colors hover:bg-white/[0.04]">
-                            <button onClick={() => setExpanded(expanded === g.id ? null : g.id)} className="w-full cursor-pointer border-none bg-transparent px-2.5 pb-3 pt-2.5 text-left text-inherit">
-                                <div className="flex items-baseline justify-between gap-2">
-                                    <span className="text-[13.5px] font-medium">{g.title}</span>
-                                    <span className="text-xs font-semibold" style={{ color }}>{g.pct}%</span>
-                                </div>
-                                <div className="mt-2 h-1.5 overflow-hidden rounded-[3px] bg-white/[0.08]">
-                                    <div className="h-full rounded-[3px] transition-[width] duration-700" style={{ width: `${g.pct}%`, background: `linear-gradient(90deg,${color}cc,${color})`, boxShadow: `0 0 10px ${color}55` }} />
-                                </div>
-                            </button>
-                            {expanded === g.id && (
-                                <div className="flex gap-2.5 px-2.5 pb-3.5 pt-0.5">
-                                    {([["Current", g.current, undefined], ["Target", g.target, undefined], ["Deadline", g.deadline ? fmtDay(g.deadline) : "—", "#5fd9a4"]] as const).map(([label, val, valColor]) => (
-                                        <div key={label} className="flex-1 rounded-xl border border-white/[0.07] bg-white/[0.04] p-2.5">
-                                            <div className="text-[10px] uppercase tracking-[0.06em] text-white/40">{label}</div>
-                                            <div className="mt-0.5 text-[13px] font-semibold" style={valColor ? { color: valColor } : undefined}>{val}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        </>
-    );
-}
-
+/* ── Tasks ─────────────────────────────────────────────────────────────────── */
 function TasksCard({ tasks }: { tasks: BentoTask[] }) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [title, setTitle] = useState("");
-    // ponytail: optimistic add/toggle — instant list update; router.refresh reconciles
-    const [optimisticTasks, applyOptimistic] = useOptimistic(
+    const [optimistic, apply] = useOptimistic(
         tasks,
         (state, action: { type: "add"; task: BentoTask } | { type: "toggle"; id: string }) =>
             action.type === "add"
                 ? [...state, action.task]
                 : state.map((t) => (t.id === action.id ? { ...t, status: t.status === "done" ? "todo" : "done" } : t)),
     );
-    const remaining = optimisticTasks.filter(t => t.status !== "done").length;
+    const remaining = optimistic.filter((t) => t.status !== "done").length;
 
     const add = () => {
         const label = title.trim();
@@ -267,7 +179,7 @@ function TasksCard({ tasks }: { tasks: BentoTask[] }) {
         fd.set("priority", "3");
         setTitle("");
         startTransition(async () => {
-            applyOptimistic({ type: "add", task: { id: crypto.randomUUID(), title: label, priority: 3, status: "todo", due_date: null } });
+            apply({ type: "add", task: { id: crypto.randomUUID(), title: label, priority: 3, status: "todo", due_date: null } });
             await createTask(fd);
             router.refresh();
         });
@@ -275,70 +187,58 @@ function TasksCard({ tasks }: { tasks: BentoTask[] }) {
 
     return (
         <>
-            <div className="flex items-center justify-between">
-                <span className={LABEL}>Tasks</span>
-                <span className="rounded-full border border-white/10 bg-white/[0.07] px-2.5 py-0.5 text-[11px] font-semibold text-white/60">{remaining} left</span>
+            <div className="flex items-baseline justify-between">
+                <div className={H}>Tasks</div>
+                <div className="text-[12.5px] font-semibold tabular-nums" style={{ color: WARM }}>{remaining} left</div>
             </div>
-            <div className="mt-3.5 flex gap-2">
+            <div className="mt-5 flex flex-1 flex-col gap-3 overflow-y-auto">
+                {optimistic.length === 0 && <p className="text-sm text-[#868da0]">All caught up 🎉</p>}
+                {optimistic.map((t) => {
+                    const done = t.status === "done";
+                    return (
+                        <div key={t.id} className="flex items-center gap-3">
+                            <CheckBox done={done} label={t.title} onClick={() => startTransition(async () => { apply({ type: "toggle", id: t.id }); await updateTaskStatus(t.id, done ? "todo" : "done"); router.refresh(); })} />
+                            <span className="min-w-0 truncate text-[13.5px] font-medium" style={{ color: done ? "#5c6270" : "#d3d7e0", textDecoration: done ? "line-through" : "none" }}>{t.title}</span>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="mt-5 flex gap-3">
                 <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") add(); }}
-                    placeholder="Add a task…"
+                    placeholder="Add a task"
                     aria-label="Add a task"
-                    className="min-w-0 flex-1 rounded-[13px] border border-white/10 bg-white/[0.05] px-3.5 py-2.5 text-[13px] text-white/90 transition-colors focus:border-[rgba(130,175,255,0.5)] focus:bg-white/[0.08]"
+                    className="neu-inset min-w-0 flex-1 rounded-[14px] border-none px-4 py-3 text-[13.5px] text-[#d3d7e0] outline-none"
                 />
-                <button
-                    onClick={add}
-                    aria-label="Add task"
-                    className="w-10 cursor-pointer rounded-[13px] border border-[rgba(130,175,255,0.35)] bg-[rgba(130,175,255,0.15)] text-[19px] text-[#a5c6ff] transition-[background,transform] hover:bg-[rgba(130,175,255,0.25)] active:scale-[0.94]"
-                >+</button>
-            </div>
-            <div className="-mr-2 mt-3 flex flex-1 flex-col gap-[3px] overflow-y-auto pr-2">
-                {optimisticTasks.length === 0 && <p className="text-sm text-white/40">All caught up 🎉</p>}
-                {optimisticTasks.map((t) => {
-                    const done = t.status === "done";
-                    return (
-                        <button
-                            key={t.id}
-                            onClick={() => startTransition(async () => { applyOptimistic({ type: "toggle", id: t.id }); await updateTaskStatus(t.id, done ? "todo" : "done"); router.refresh(); })}
-                            className="flex cursor-pointer items-center gap-3 rounded-[13px] border-none bg-transparent p-2.5 text-left text-inherit transition-colors hover:bg-white/[0.05]"
-                        >
-                            <span
-                                className="flex h-[21px] w-[21px] flex-none items-center justify-center rounded-full border-[1.5px] text-[11px] font-extrabold text-[#0a0c14] transition-colors"
-                                style={{ borderColor: done ? "#8da6ff" : "rgba(255,255,255,0.3)", background: done ? "linear-gradient(135deg,#a5c6ff,#8da6ff)" : "transparent" }}
-                            >{done ? "✓" : ""}</span>
-                            <span className={`flex-1 truncate text-[13.5px] font-medium ${done ? "text-white/35 line-through" : "text-white/90"}`}>{t.title}</span>
-                            <span className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: done ? "transparent" : PRIO_DOT[t.priority] }} />
-                        </button>
-                    );
-                })}
+                <button onClick={add} aria-label="Add task" className="neu-btn flex h-[43px] w-[43px] flex-none items-center justify-center rounded-[14px] text-[20px] font-semibold" style={{ color: COOL }}>+</button>
             </div>
         </>
     );
 }
 
+/* ── Today's agenda ────────────────────────────────────────────────────────── */
 function TodayCard({ today }: { today: BentoTask[] }) {
     const now = new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const PRIO = { 1: "#f2a86f", 2: "#f2a86f", 3: COOL, 4: "#5c6270" } as const;
     return (
         <>
-            <div className="flex items-center justify-between">
-                <span className={LABEL}>Today</span>
-                <span className="text-xs text-white/40">{now}</span>
+            <div className="flex items-baseline justify-between">
+                <div className={H}>Today</div>
+                <div className="text-[12.5px] text-[#868da0]">{now}</div>
             </div>
-            <div className="-mr-2 mt-3.5 flex flex-1 flex-col gap-[5px] overflow-y-auto pr-2">
-                {today.length === 0 && <p className="text-sm text-white/40">Nothing due today.</p>}
+            <div className="mt-4 flex flex-1 flex-col gap-1 overflow-y-auto">
+                {today.length === 0 && <p className="text-sm text-[#868da0]">Nothing due today.</p>}
                 {today.map((t) => {
                     const overdue = t.due_date && new Date(t.due_date) < new Date(new Date().toDateString());
                     return (
-                        <div key={t.id} className="flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-white/[0.05]">
-                            <span className={`w-[52px] flex-none text-[11.5px] font-semibold ${overdue ? "text-[#f28c8c]" : "text-white/50"}`}>
-                                {overdue ? "Overdue" : "Due"}
-                            </span>
-                            <span className="h-[26px] w-[3px] flex-none rounded-sm" style={{ background: PRIO_DOT[t.priority] }} />
+                        <div key={t.id} className="flex gap-4 py-2.5">
+                            <div className="w-11 flex-none pt-0.5 text-right text-[12.5px] font-semibold" style={{ color: overdue ? WARM : "#868da0" }}>{overdue ? "Late" : "Due"}</div>
+                            <span className="mt-1.5 h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.priority], boxShadow: `0 0 7px ${PRIO[t.priority]}99` }} />
                             <div className="min-w-0">
-                                <div className="truncate text-[13px] font-medium">{t.title}</div>
-                                <div className="text-[11px] text-white/40">P{t.priority}{t.due_date ? ` · ${fmtDay(t.due_date)}` : ""}</div>
+                                <div className="truncate text-[13.5px] font-semibold text-[#d3d7e0]">{t.title}</div>
+                                <div className="mt-0.5 text-[12px] text-[#868da0]">P{t.priority}{t.due_date ? ` · ${fmtDay(t.due_date)}` : ""}</div>
                             </div>
                         </div>
                     );
@@ -348,17 +248,49 @@ function TodayCard({ today }: { today: BentoTask[] }) {
     );
 }
 
+/* ── Transactions ──────────────────────────────────────────────────────────── */
+function TransactionsCard({ transactions }: { transactions: BentoData["finance"]["transactions"] }) {
+    return (
+        <>
+            <div className="flex items-center justify-between">
+                <div className={H}>Transactions</div>
+                <Link href="/dashboard/finance" className="neu-btn rounded-xl px-4 py-2 text-[12.5px] font-semibold" style={{ color: COOL }}>View all</Link>
+            </div>
+            <div className="mt-3.5 flex flex-col gap-1.5">
+                {transactions.length === 0 && <p className="text-sm text-[#868da0]">No transactions yet.</p>}
+                {transactions.map((t, i) => {
+                    const color = TX_COLORS[i % TX_COLORS.length];
+                    return (
+                        <div key={t.id} className="flex items-center gap-4 rounded-[14px] px-1 py-2.5 transition-colors hover:bg-white/[0.025]">
+                            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[13px] font-bold text-[#1d1f24]" style={{ background: color }}>
+                                {(t.description || t.category || "?").charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="truncate text-[13.5px] font-semibold text-[#d3d7e0]">{t.description || t.category}</div>
+                                <div className="mt-0.5 text-[12px] text-[#868da0]">{t.category} · {fmtDay(t.date)}</div>
+                            </div>
+                            <div className="text-[13.5px] font-semibold tabular-nums" style={{ color: t.amount > 0 ? COOL : "#d3d7e0" }}>
+                                {t.amount > 0 ? "+" : "−"}${money(Math.abs(t.amount))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </>
+    );
+}
+
+/* ── Quick notes ───────────────────────────────────────────────────────────── */
 function NotesCard() {
     const [note, setNote] = useState("");
     const [status, setStatus] = useState("Saved");
     const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    // ponytail: localStorage persistence — move to a Supabase notes table when cross-device sync matters
     useEffect(() => { setNote(localStorage.getItem("axiom-quick-note") ?? ""); }, []);
     return (
         <>
-            <div className="flex items-center justify-between">
-                <span className={LABEL}>Quick notes</span>
-                <span className="text-[11px] text-white/30">{status}</span>
+            <div className="flex items-baseline justify-between">
+                <div className={H}>Quick notes</div>
+                <div className="text-[12px] text-[#868da0]">{status}</div>
             </div>
             <textarea
                 value={note}
@@ -372,22 +304,33 @@ function NotesCard() {
                     }, 900);
                 }}
                 placeholder="Jot something down…"
-                className="mt-3 flex-1 resize-none border-none bg-transparent font-sans text-[13.5px] leading-[1.65] text-white/85"
+                className="neu-inset mt-4 min-h-[170px] flex-1 resize-none rounded-[18px] border-none px-5 py-4 text-[14px] leading-[1.6] text-[#d3d7e0] outline-none"
             />
         </>
     );
 }
 
 export function BentoHome({ data }: { data: BentoData }) {
+    const greeting = (() => {
+        const h = new Date().getHours();
+        return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    })();
+    const sub = new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
     return (
-        <main className="bento grid grid-cols-1 gap-5 py-8 md:grid-cols-2 lg:auto-rows-[minmax(240px,auto)] lg:grid-cols-12">
-            <TiltCard className="lg:col-span-3 lg:row-span-3"><FinanceCard finance={data.finance} /></TiltCard>
-            <TiltCard className="lg:col-span-6"><HabitsCard habits={data.habits} /></TiltCard>
-            <div className="hidden lg:col-span-3 lg:row-span-2 lg:block"><ParticleBrain /></div>
-            <TiltCard className="lg:col-span-3"><GoalsCard goals={data.goals} /></TiltCard>
-            <TiltCard className="lg:col-span-3 lg:row-span-2"><TasksCard tasks={data.tasks} /></TiltCard>
-            <TiltCard className="lg:col-span-3"><TodayCard today={data.today} /></TiltCard>
-            <TiltCard className="lg:col-span-3"><NotesCard /></TiltCard>
-        </main>
+        <div style={{ animation: "paneIn 320ms cubic-bezier(0.23,1,0.32,1) both" }}>
+            <div className="mt-9">
+                <div className="text-[27px] font-semibold tracking-[-0.01em] text-[#eceef3]">{greeting}</div>
+                <div className="mt-0.5 text-[14px] text-[#868da0]">{sub}</div>
+            </div>
+            <main className="mt-7 grid grid-cols-1 gap-7 lg:grid-cols-12">
+                <section className={`${CARD} lg:col-span-7`}><BalanceCard finance={data.finance} /></section>
+                <section className={`${CARD} lg:col-span-5`}><GoalsCard goals={data.goals} /></section>
+                <section className={`${CARD} flex flex-col lg:col-span-4`}><HabitsCard habits={data.habits} heat={data.heat} /></section>
+                <section className={`${CARD} flex flex-col lg:col-span-4`}><TasksCard tasks={data.tasks} /></section>
+                <section className={`${CARD} flex flex-col lg:col-span-4`}><TodayCard today={data.today} /></section>
+                <section className={`${CARD} lg:col-span-7`}><TransactionsCard transactions={data.finance.transactions} /></section>
+                <section className={`${CARD} flex flex-col lg:col-span-5`}><NotesCard /></section>
+            </main>
+        </div>
     );
 }

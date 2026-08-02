@@ -83,8 +83,8 @@ export function WheelSelect({
             <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className={`w-full truncate rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-left transition-transform duration-150 active:scale-[0.98] focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                    value ? "text-zinc-50" : "text-white/35"
+                className={`w-full truncate rounded-[12px] neu-inset border-none px-3 py-2.5 text-left transition-transform duration-150 active:scale-[0.98] focus:outline-none ${
+                    value ? "text-[#d3d7e0]" : "text-[#5c6270]"
                 }`}
             >
                 {selected?.label ?? "None"}
@@ -112,7 +112,7 @@ export function WheelSelect({
                                 <button
                                     type="button"
                                     onClick={() => setOpen(false)}
-                                    className="rounded-lg bg-blue-500/20 border border-blue-500/30 px-3 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/30"
+                                    className="neu-btn rounded-[10px] px-3 py-1 text-xs font-semibold text-[#6fd6c3]"
                                 >
                                     Done
                                 </button>
@@ -168,8 +168,8 @@ export function WheelDatePicker({
             <button
                 type="button"
                 onClick={() => (open ? setOpen(false) : openPicker())}
-                className={`w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-left transition-transform duration-150 active:scale-[0.98] focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                    value ? "text-zinc-50" : "text-white/35"
+                className={`w-full rounded-[12px] neu-inset border-none px-3 py-2.5 text-left transition-transform duration-150 active:scale-[0.98] focus:outline-none ${
+                    value ? "text-[#d3d7e0]" : "text-[#5c6270]"
                 }`}
             >
                 {label}
@@ -207,7 +207,7 @@ export function WheelDatePicker({
                                 <button
                                     type="button"
                                     onClick={() => setOpen(false)}
-                                    className="rounded-lg bg-blue-500/20 border border-blue-500/30 px-3 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/30"
+                                    className="neu-btn rounded-[10px] px-3 py-1 text-xs font-semibold text-[#6fd6c3]"
                                 >
                                     Done
                                 </button>

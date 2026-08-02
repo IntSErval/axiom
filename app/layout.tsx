@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit, Geist_Mono } from "next/font/google";
 import { MotionConfig } from "framer-motion";
-import { GlowCursor } from "@/components/background/Glowtrail";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -26,14 +26,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen bg-[#07080d] text-zinc-50 antialiased">
-        <div aria-hidden className="bubble bubble-a" />
-        <div aria-hidden className="bubble bubble-b" />
+    <html lang="en" className={`${outfit.variable} ${geistMono.variable}`}>
+      <body className="min-h-screen bg-[#26292f] text-[#d3d7e0] antialiased">
         <MotionConfig reducedMotion="user">
           <div className="relative z-[1]">{children}</div>
         </MotionConfig>
-        <GlowCursor />
       </body>
     </html>
   );

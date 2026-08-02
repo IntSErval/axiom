@@ -59,24 +59,27 @@ export default function LoginPage() {
         setStatus('Check your email to confirm your account before signing in.');
     };
 
+    const inputCls =
+        "neu-inset rounded-[14px] border-none px-4 py-3 text-sm text-[#d3d7e0] outline-none";
+
     return (
         <motion.main
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="flex min-h-screen w-full items-center justify-center bg-[#080810] px-6"
+            className="flex min-h-screen w-full items-center justify-center bg-[#26292f] px-6"
         >
-            <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8 backdrop-blur-xl">
-                <h1 className="font-serif text-2xl font-bold italic tracking-tight text-white/90">
+            <div className="glass w-full max-w-sm p-9">
+                <h1 className="text-2xl font-bold italic tracking-[0.14em] text-[#eceef3]">
                     AXIOM
                 </h1>
-                <p className="mt-1 font-serif italic text-sm text-white/50">
+                <p className="mt-1.5 text-sm italic text-[#868da0]">
                     {mode === 'sign_in' ? 'Welcome back.' : 'Create your account.'}
                 </p>
 
                 <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
                     <label className="flex flex-col gap-1.5">
-                        <span className="text-xs uppercase tracking-wide text-white/40">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#868da0]">
                             Email
                         </span>
                         <input
@@ -84,13 +87,13 @@ export default function LoginPage() {
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white/90 outline-none transition-colors duration-150 focus:border-[#3b82f6]/60"
+                            className={inputCls}
                             autoComplete="email"
                         />
                     </label>
 
                     <label className="flex flex-col gap-1.5">
-                        <span className="text-xs uppercase tracking-wide text-white/40">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#868da0]">
                             Password
                         </span>
                         <input
@@ -99,18 +102,18 @@ export default function LoginPage() {
                             minLength={6}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white/90 outline-none transition-colors duration-150 focus:border-[#3b82f6]/60"
+                            className={inputCls}
                             autoComplete={mode === 'sign_in' ? 'current-password' : 'new-password'}
                         />
                     </label>
 
                     {error && (
-                        <p className="text-sm text-red-400/90" role="alert">
+                        <p className="text-sm text-[#f2a86f]" role="alert">
                             {error}
                         </p>
                     )}
                     {status && (
-                        <p className="text-sm text-[#22c55e]/90" role="status">
+                        <p className="text-sm text-[#6fd6c3]" role="status">
                             {status}
                         </p>
                     )}
@@ -118,7 +121,7 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="mt-2 rounded-xl bg-[#3b82f6] px-4 py-2.5 text-sm font-medium text-white transition-transform duration-150 ease-out hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
+                        className="neu-btn mt-2 rounded-[15px] px-4 py-3 text-sm font-semibold text-[#6fd6c3] disabled:opacity-50"
                     >
                         {loading
                             ? 'Please wait…'
@@ -135,7 +138,7 @@ export default function LoginPage() {
                         setError(null);
                         setStatus(null);
                     }}
-                    className="mt-6 w-full text-center text-sm text-white/50 transition-colors duration-150 hover:text-white/80"
+                    className="mt-6 w-full text-center text-sm text-[#868da0] transition-colors duration-150 hover:text-[#d3d7e0]"
                 >
                     {mode === 'sign_in'
                         ? "Don't have an account? Sign up"

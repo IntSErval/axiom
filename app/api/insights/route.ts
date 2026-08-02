@@ -80,7 +80,7 @@ export async function GET() {
                 id: "tasks-overdue",
                 domain: "tasks",
                 message: `${overdue.length} task${overdue.length > 1 ? "s" : ""} overdue — knock out the oldest one first`,
-                href: "/dashboard/tasks",
+                href: "/dashboard",
             });
         } else {
             // tasks-p1 (only if overdue didn't fire)
@@ -90,7 +90,7 @@ export async function GET() {
                     id: "tasks-p1",
                     domain: "tasks",
                     message: `You have ${p1.length} P1 task${p1.length > 1 ? "s" : ""} waiting`,
-                    href: "/dashboard/tasks",
+                    href: "/dashboard",
                 });
             }
         }

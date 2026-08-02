@@ -10,9 +10,9 @@ export default async function DashboardHomePage() {
 
     const uid = user.id;
     const todayStr = new Date().toISOString().slice(0, 10);
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+    const monthStr = todayStr.slice(0, 7);
+    const halfYearAgo = new Date(Date.now() - 190 * 864e5).toISOString().slice(0, 10);
     const ninetyDaysAgo = new Date(Date.now() - 90 * 864e5).toISOString();
-    const sevenDaysAgo = new Date(Date.now() - 7 * 864e5);
 
     const [
         { data: taskRows },
@@ -35,9 +35,9 @@ export default async function DashboardHomePage() {
             .from("transactions")
             .select("id,description,category,amount,date")
             .eq("user_id", uid)
-            .gte("date", thirtyDaysAgo)
+            .gte("date", halfYearAgo)
             .order("date", { ascending: false })
-            .limit(60),
+            .limit(400),
         supabase
             .from("goals")
             .select("id,title,target_amount,current_amount,deadline")
@@ -64,28 +64,48 @@ export default async function DashboardHomePage() {
             name: h.name,
             // ponytail: cast note:null — computeStreak only reads completed_at
             streak: computeStreak(hLogs.map((l) => ({ ...l, note: null }))),
-            week: new Set(
-                hLogs
-                    .filter((l) => new Date(l.completed_at) >= sevenDaysAgo)
-                    .map((l) => l.completed_at.slice(0, 10)),
-            ).size,
             done: hLogs.some((l) => l.completed_at.slice(0, 10) === todayStr),
         };
     });
+
+    // 12-week completion heatmap: total habit logs per day, oldest → today (84 cells)
+    const heatCounts = new Map<string, number>();
+    for (const l of logs) {
+        const d = l.completed_at.slice(0, 10);
+        heatCounts.set(d, (heatCounts.get(d) ?? 0) + 1);
+    }
+    const heat: number[] = [];
+    for (let i = 83; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+        heat.push(heatCounts.get(d) ?? 0);
+    }
 
     // --- Finance: balance, month income/spending, cumulative sparkline ---
     const accounts = (accountRows as Pick<Account, "id" | "balance">[] | null) ?? [];
     const total = accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0);
     const txs = (txRows as Pick<Transaction, "id" | "description" | "category" | "amount" | "date">[] | null) ?? [];
-    const income = txs.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-    const spending = txs.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+    // This month's income / spending
+    const monthTx = txs.filter((t) => t.date.slice(0, 7) === monthStr);
+    const income = monthTx.filter((t) => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+    const spending = monthTx.filter((t) => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
 
-    const byDay = new Map<string, number>();
-    for (const t of txs) byDay.set(t.date, (byDay.get(t.date) ?? 0) + t.amount);
-    let running = 0;
-    const spark = [...byDay.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([, net]) => (running += net));
+    // Last 6 calendar months of income vs spending, oldest → newest
+    const bucket = new Map<string, { income: number; spending: number }>();
+    for (const t of txs) {
+        const k = t.date.slice(0, 7);
+        const b = bucket.get(k) ?? { income: 0, spending: 0 };
+        if (t.amount > 0) b.income += t.amount;
+        else b.spending += Math.abs(t.amount);
+        bucket.set(k, b);
+    }
+    const bars = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - (5 - i));
+        const k = d.toISOString().slice(0, 7);
+        const b = bucket.get(k) ?? { income: 0, spending: 0 };
+        return { month: d.toLocaleDateString("en-US", { month: "short" }), income: b.income, spending: b.spending };
+    });
 
     // --- Goals ---
     const goals = ((goalRows as Pick<Goal, "id" | "title" | "target_amount" | "current_amount" | "deadline">[] | null) ?? []).map((g) => ({
@@ -106,10 +126,11 @@ export default async function DashboardHomePage() {
             total,
             income,
             spending,
-            spark,
+            bars,
             transactions: txs.slice(0, 8).map((t) => ({ ...t, description: t.description ?? t.category })),
         },
         habits,
+        heat,
         goals,
         tasks,
         today,

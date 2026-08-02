@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import { motion } from "framer-motion";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { NotchRing } from "@/components/ui/neu";
 import { GlassModal } from "@/components/ui/GlassModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { WheelDatePicker, WheelSelect } from "@/components/ui/WheelDatePicker";
@@ -17,9 +17,9 @@ import {
     toggleMilestone,
 } from "@/app/dashboard/goals/actions";
 
-const inputCls = "w-full rounded-lg bg-white/[0.05] border border-white/[0.08] px-3 py-2 text-zinc-50 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500";
+const inputCls = "w-full neu-inset rounded-[12px] border-none px-3 py-2.5 text-[#d3d7e0] placeholder:text-[#5c6270] outline-none";
 const selectCls = `${inputCls} appearance-none`;
-const labelCls = "block text-xs text-zinc-500 mb-1";
+const labelCls = "block text-xs text-[#868da0] mb-1";
 
 const DAY_MS = 86400000;
 
@@ -126,10 +126,10 @@ function GoalForm({ initial, habits, budgets, onDone }: { initial?: Goal; habits
                 </div>
             )}
             <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={onDone} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-zinc-50 text-sm">
+                <button type="button" onClick={onDone} className="neu-btn px-4 py-2 rounded-[13px] text-sm font-semibold text-[#868da0] hover:text-[#d3d7e0]">
                     Cancel
                 </button>
-                <button type="submit" disabled={pending} className="px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 border border-violet-500/30 text-sm disabled:opacity-50">
+                <button type="submit" disabled={pending} className="neu-btn px-4 py-2 rounded-[13px] text-[#6fd6c3] text-sm font-semibold disabled:opacity-50">
                     {pending ? "Saving…" : initial ? "Save" : "Create"}
                 </button>
             </div>
@@ -170,10 +170,10 @@ function MilestoneForm({ goalId, onDone }: { goalId: string; onDone: () => void 
                 <WheelDatePicker value={dueDate} onChange={setDueDate} placeholder="No due date" />
             </div>
             <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={onDone} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-zinc-50 text-sm">
+                <button type="button" onClick={onDone} className="neu-btn px-4 py-2 rounded-[13px] text-sm font-semibold text-[#868da0] hover:text-[#d3d7e0]">
                     Cancel
                 </button>
-                <button type="submit" disabled={pending} className="px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 border border-violet-500/30 text-sm disabled:opacity-50">
+                <button type="submit" disabled={pending} className="neu-btn px-4 py-2 rounded-[13px] text-[#6fd6c3] text-sm font-semibold disabled:opacity-50">
                     {pending ? "Adding…" : "Add"}
                 </button>
             </div>
@@ -295,132 +295,122 @@ export function GoalList({
         const pace = isCompleted ? null : computePace(goal, current);
         const retro = isCompleted ? computeRetro(goal, activity) : null;
 
+        const behind = !!pace && pace.behindDays >= 1;
         return (
-            <GlassCard key={goal.id} className="p-5 group relative">
-                <div className="flex justify-between mb-2">
-                    <span className="text-zinc-50 font-medium">{goal.title}</span>
-                    <div className="flex items-center gap-3">
-                        <span className="text-violet-400 italic">{pct.toFixed(0)}%</span>
-                        <button
-                            type="button"
-                            onClick={() => setEditGoal(goal)}
-                            className="text-zinc-600 hover:text-zinc-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                            aria-label="Edit goal"
-                        >
-                            <EditIcon />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setDeleteTarget(goal)}
-                            className="text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                            aria-label="Delete goal"
-                        >
-                            <DeleteIcon />
-                        </button>
-                    </div>
+            <GlassCard
+                key={goal.id}
+                className={`group flex gap-6 rounded-[24px] px-7 py-6 transition-[transform,box-shadow] duration-200 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-[2px] hover:[box-shadow:-10px_-10px_24px_rgba(255,255,255,0.055),13px_13px_30px_rgba(0,0,0,0.62)] ${isCompleted ? "opacity-80" : ""}`}
+            >
+                <div className="self-center">
+                    <NotchRing pct={pct} size={86} label={`${pct.toFixed(0)}%`} behind={behind} />
                 </div>
-
-                <div className="h-2 rounded-full bg-white/[0.05] overflow-hidden mb-2">
-                    <motion.div
-                        className={`h-full rounded-full ${isCompleted ? "bg-emerald-400" : "bg-violet-500"}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.6, ease: "easeOut" }}
-                    />
-                </div>
-
-                {pace && (
-                    <div className={`text-[11px] mb-2 ${
-                        pace.behindDays >= 1 ? "text-rose-300"
-                        : pace.behindDays <= -1 ? "text-emerald-300"
-                        : "text-white/45"
-                    }`}>
-                        {pace.behindDays >= 1
-                            ? `⌛ ${Math.round(pace.behindDays)}d behind pace`
-                            : pace.behindDays <= -1
-                            ? `⚡ ${Math.round(-pace.behindDays)}d ahead of pace`
-                            : "● on pace"}
-                        {pace.projected
-                            ? ` · projected ${fmtDate(pace.projected)}`
-                            : " · no progress yet"}
-                        {goal.deadline && ` · due ${fmtDate(new Date(goal.deadline + "T00:00:00"))}`}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-3.5">
+                        <span className="text-base font-semibold text-[#e3e6ec]">{goal.title}</span>
+                        <span className="flex flex-none items-center gap-3">
+                            <span className="text-[12.5px] tabular-nums text-[#868da0]">
+                                {current.toLocaleString()} / {goal.target_amount.toLocaleString()}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setEditGoal(goal)}
+                                className="text-[#868da0] hover:text-[#d3d7e0] opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="Edit goal"
+                            >
+                                <EditIcon />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDeleteTarget(goal)}
+                                className="text-[#868da0] hover:text-[#f2a86f] opacity-0 group-hover:opacity-100 transition-opacity"
+                                aria-label="Delete goal"
+                            >
+                                <DeleteIcon />
+                            </button>
+                        </span>
                     </div>
-                )}
 
-                {retro && (
-                    <div className="mb-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-2 text-[11px] text-emerald-300">
-                        ✓ Finished in {retro.days} {retro.days === 1 ? "day" : "days"}
-                        {" · "}{retro.count} check-in{retro.count === 1 ? "" : "s"}
-                        {retro.longest > 1 && <> · 🔥 longest streak {retro.longest}d</>}
-                    </div>
-                )}
+                    {pace && (
+                        <div className={`mt-[7px] text-xs font-semibold ${behind ? "text-[#f2a86f]" : "text-[#6fd6c3]"}`}>
+                            {pace.behindDays >= 1
+                                ? `${Math.round(pace.behindDays)} d behind pace`
+                                : pace.behindDays <= -1
+                                ? `${Math.round(-pace.behindDays)} d ahead of pace`
+                                : "On pace"}
+                            {pace.projected
+                                ? ` · projected ${fmtDate(pace.projected)}`
+                                : " · no progress yet"}
+                            {goal.deadline && ` · due ${fmtDate(new Date(goal.deadline + "T00:00:00"))}`}
+                        </div>
+                    )}
 
-                {(goal.category || linkedHabit) && (
-                    <div className="flex flex-col gap-1 mb-3 text-[11px]">
-                        {goal.category && (
-                            <div className="text-[#4fd8c8]">💰 Auto-tracked from <b>{goal.category}</b> transactions</div>
+                    {retro && (
+                        <div className="mt-[7px] text-xs text-[#868da0]">
+                            Finished in {retro.days} {retro.days === 1 ? "day" : "days"}
+                            {" · "}{retro.count} check-in{retro.count === 1 ? "" : "s"}
+                            {retro.longest > 1 && <> · longest run {retro.longest} d</>}
+                        </div>
+                    )}
+
+                    {(goal.category || linkedHabit) && (
+                        <div className="mt-1 text-xs text-[#868da0]">
+                            {goal.category
+                                ? <>Auto-tracked from <b className="text-[#6fd6c3]">{goal.category}</b> transactions</>
+                                : linkedHabit && (
+                                    <>Linked to <b className="text-[#6fd6c3]">{linkedHabit.name}</b> — each log counts toward this goal</>
+                                )}
+                        </div>
+                    )}
+
+                    <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+                        {goalMilestones.map((m) => {
+                            const achieved = m.status === "achieved";
+                            return (
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => handleToggleMilestone(m)}
+                                    className={`neu-btn rounded-[11px] px-3.5 py-[7px] text-[11.5px] font-semibold ${
+                                        achieved
+                                            ? "text-[#6fd6c3] [box-shadow:inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-3px_-3px_7px_rgba(255,255,255,0.035)]"
+                                            : "text-[#868da0]"
+                                    }`}
+                                >
+                                    {m.title}
+                                </button>
+                            );
+                        })}
+                        {!isCompleted && (
+                            <button
+                                type="button"
+                                onClick={() => setMsGoalId(goal.id)}
+                                className="rounded-[11px] px-2 py-[7px] text-[11.5px] font-semibold text-[#868da0] hover:text-[#d3d7e0] transition-colors"
+                            >
+                                + Milestone
+                            </button>
                         )}
-                        {linkedHabit && (
-                            <div className="text-[#5fd9a4]">
-                                🔥 {linkedHabit.streak}-day streak on <b>{linkedHabit.name}</b>
-                                {!goal.category && " · each log counts toward this goal"}
+                        {!isCompleted && derived === null && (
+                            <div className="ml-auto flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max={goal.target_amount}
+                                    step="any"
+                                    value={progressInputs[goal.id] ?? ""}
+                                    onChange={(e) => setProgressInputs((p) => ({ ...p, [goal.id]: e.target.value }))}
+                                    className="neu-inset w-[86px] rounded-[11px] border-none px-3 py-2 text-right text-[12.5px] tabular-nums text-[#d3d7e0] outline-none"
+                                    aria-label="Current amount"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => handleProgressUpdate(goal)}
+                                    className="neu-btn rounded-[11px] px-[15px] py-2 text-xs font-semibold text-[#6fd6c3]"
+                                >
+                                    Update
+                                </button>
                             </div>
                         )}
                     </div>
-                )}
-
-                {!isCompleted && derived === null && (
-                    <div className="flex items-center gap-2 mb-3">
-                        <input
-                            type="number"
-                            min="0"
-                            max={goal.target_amount}
-                            step="any"
-                            value={progressInputs[goal.id] ?? ""}
-                            onChange={(e) => setProgressInputs((p) => ({ ...p, [goal.id]: e.target.value }))}
-                            className="w-32 rounded-lg bg-white/[0.05] border border-white/[0.08] px-2 py-1 text-sm text-zinc-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            aria-label="Current amount"
-                        />
-                        <span className="text-zinc-500 text-sm">/ {goal.target_amount}</span>
-                        <button
-                            type="button"
-                            onClick={() => handleProgressUpdate(goal)}
-                            className="px-3 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-300 text-sm"
-                        >
-                            Update
-                        </button>
-                    </div>
-                )}
-                {!isCompleted && derived !== null && (
-                    <div className="mb-3 text-sm text-zinc-500">
-                        {current.toLocaleString()} / {goal.target_amount.toLocaleString()}
-                    </div>
-                )}
-
-                <div className="flex gap-2 flex-wrap items-center">
-                    {goalMilestones.map((m) => (
-                        <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => handleToggleMilestone(m)}
-                            className={`text-xs px-2 py-1 rounded-full border transition-colors ${
-                                m.status === "achieved"
-                                    ? "border-green-500/30 text-green-400 hover:border-green-500/60"
-                                    : "border-white/[0.08] text-zinc-500 hover:text-zinc-300"
-                            }`}
-                        >
-                            {m.title}
-                        </button>
-                    ))}
-                    {!isCompleted && (
-                        <button
-                            type="button"
-                            onClick={() => setMsGoalId(goal.id)}
-                            className="text-xs text-zinc-500 hover:text-zinc-50 px-2 py-1 transition-colors"
-                        >
-                            + Milestone
-                        </button>
-                    )}
                 </div>
             </GlassCard>
         );
@@ -430,22 +420,20 @@ export function GoalList({
     const completedGoals = goals.filter((g) => g.status === "completed");
 
     return (
-        <div className="max-w-2xl mx-auto py-8 space-y-4">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold italic text-zinc-50">Goals</h1>
+        <div className="flex flex-col gap-[22px] py-8 [animation:paneIn_320ms_cubic-bezier(0.23,1,0.32,1)_both]">
+            <div className="flex items-center justify-between gap-4">
+                <h1 className="text-[25px] font-semibold tracking-[-0.01em] text-[#eceef3]">Goals</h1>
                 <button
                     type="button"
                     onClick={() => setNewGoalOpen(true)}
-                    className="px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 border border-violet-500/30 text-sm font-medium"
+                    className="neu-btn px-5 py-3 rounded-[15px] text-[#6fd6c3] text-[13px] font-semibold"
                 >
-                    + New Goal
+                    + New goal
                 </button>
             </div>
             {insight && (
-                <div className="mt-3 flex items-center gap-2 text-sm">
-                    <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 italic">
-                        ✦ {insight}
-                    </span>
+                <div className="self-start inline-flex items-center gap-2 neu-inset px-4 py-2 rounded-[13px] text-[12.5px] italic text-[#6fd6c3]">
+                    ✦ {insight}
                 </div>
             )}
 
@@ -453,7 +441,7 @@ export function GoalList({
 
             {completedGoals.length > 0 && (
                 <>
-                    <div className="pt-4 text-[11px] font-semibold uppercase tracking-[.14em] text-white/45">
+                    <div className="pt-1.5 text-[11.5px] font-semibold uppercase tracking-[0.12em] text-[#5c6270]">
                         Completed
                     </div>
                     {completedGoals.map(renderGoalCard)}
