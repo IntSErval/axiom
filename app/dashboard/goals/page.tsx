@@ -21,7 +21,7 @@ export default async function GoalsPage() {
     const habitIds = (goals ?? []).map((g: Goal) => g.habit_id).filter(Boolean) as string[];
     const categories = (goals ?? []).map((g: Goal) => g.category).filter(Boolean) as string[];
 
-    const [{ data: milestones }, { data: checkins }, { data: habits }, { data: budgets }, { data: habitLogs }, { data: transactions }] = await Promise.all([
+    const [{ data: milestones }, { data: checkins }, { data: habits }, { data: budgets }, { data: habitLogs }, { data: transactions }, { data: tasks }] = await Promise.all([
         supabase.from("milestones").select("*").in("goal_id", goalIds),
         supabase.from("goal_checkins").select("*").in("goal_id", goalIds).order("created_at"),
         supabase.from("habits").select("*").eq("user_id", user.id),
@@ -31,6 +31,9 @@ export default async function GoalsPage() {
             : Promise.resolve({ data: [] }),
         categories.length
             ? supabase.from("transactions").select("*").eq("user_id", user.id).in("category", categories)
+            : Promise.resolve({ data: [] }),
+        goalIds.length
+            ? supabase.from("tasks").select("*").in("goal_id", goalIds).order("created_at")
             : Promise.resolve({ data: [] }),
     ]);
 
@@ -59,6 +62,7 @@ export default async function GoalsPage() {
             budgets={budgets ?? []}
             habitLogs={habitLogs ?? []}
             transactions={transactions ?? []}
+            tasks={tasks ?? []}
         />
     );
 }

@@ -6,7 +6,7 @@ import { GlassModal } from "@/components/ui/GlassModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { WheelDatePicker, WheelSelect } from "@/components/ui/WheelDatePicker";
 import { EditIcon, DeleteIcon } from "@/components/ui/icons";
-import type { Goal, Milestone, MilestoneStatus, GoalCheckin, Habit, HabitLog, Budget, Transaction } from "@/lib/database";
+import type { Goal, Milestone, MilestoneStatus, GoalCheckin, Habit, HabitLog, Budget, Transaction, Task } from "@/lib/database";
 import { deriveCurrent, activityDates } from "@/lib/goal-progress";
 import { computePace, computeMomentum, formatGoalAmount } from "@/lib/goal-calc";
 import {
@@ -16,6 +16,8 @@ import {
     deleteGoal,
     createMilestone,
     toggleMilestone,
+    createGoalTask,
+    toggleGoalTask,
 } from "@/app/dashboard/goals/actions";
 
 const inputCls = "w-full neu-inset rounded-[12px] border-none px-3 py-2.5 text-[#d3d7e0] placeholder:text-[#5c6270] outline-none";
@@ -227,6 +229,7 @@ export function GoalList({
     budgets,
     habitLogs,
     transactions,
+    tasks,
 }: {
     goals: Goal[];
     milestones: Milestone[];
@@ -235,6 +238,7 @@ export function GoalList({
     budgets: Budget[];
     habitLogs: HabitLog[];
     transactions: Transaction[];
+    tasks: Task[];
 }) {
     const [goals, setGoals] = useState(initialGoals);
     const [milestones, setMilestones] = useState(initialMilestones);
@@ -244,6 +248,10 @@ export function GoalList({
     useEffect(() => setGoals(initialGoals), [initialGoals]);
     useEffect(() => setMilestones(initialMilestones), [initialMilestones]);
     useEffect(() => setCheckins(initialCheckins), [initialCheckins]);
+    const [taskList, setTaskList] = useState(tasks);
+    useEffect(() => setTaskList(tasks), [tasks]);
+    const [newTaskFor, setNewTaskFor] = useState<string | null>(null);
+    const [newTaskTitle, setNewTaskTitle] = useState("");
 
     const [insight, setInsight] = useState<string | null>(null);
 
@@ -328,12 +336,41 @@ export function GoalList({
         });
     }
 
+    function handleToggleTask(task: Task) {
+        const done = task.status !== "done";
+        const prev = taskList;
+        setTaskList((ts) => ts.map((t) => t.id === task.id ? { ...t, status: done ? "done" : "todo" } : t));
+        startTransition(async () => {
+            try {
+                await toggleGoalTask(task.id, done);
+            } catch (err) {
+                setTaskList(prev);
+                alert((err as Error).message);
+            }
+        });
+    }
+
+    function handleCreateTask(goalId: string) {
+        const title = newTaskTitle.trim();
+        if (!title) { setNewTaskFor(null); return; }
+        setNewTaskTitle("");
+        setNewTaskFor(null);
+        startTransition(async () => {
+            try {
+                await createGoalTask(goalId, title);
+            } catch (err) {
+                alert((err as Error).message);
+            }
+        });
+    }
+
     function renderGoalCard(goal: Goal) {
         const linkedHabit = goal.habit_id ? habits.find((h) => h.id === goal.habit_id) : undefined;
         const derived = deriveCurrent(goal, habitLogs, transactions);
         const current = derived ?? goal.current_amount;
         const pct = Math.min(100, goal.target_amount > 0 ? (current / goal.target_amount) * 100 : 0);
         const goalMilestones = milestones.filter((m) => m.goal_id === goal.id);
+        const goalTasks = taskList.filter((t) => t.goal_id === goal.id);
         const activity = activityDates(goal, habitLogs, transactions)
             ?? checkins.filter((c) => c.goal_id === goal.id).map((c) => c.created_at.slice(0, 10));
         const isCompleted = goal.status === "completed";
@@ -491,6 +528,42 @@ export function GoalList({
                             </div>
                         )}
                     </div>
+
+                    {(goalTasks.length > 0 || !isCompleted) && (
+                        <div className="mt-3.5 space-y-1.5">
+                            {goalTasks.map((t) => {
+                                const done = t.status === "done";
+                                return (
+                                    <button
+                                        key={t.id}
+                                        type="button"
+                                        onClick={() => handleToggleTask(t)}
+                                        className="flex w-full items-center gap-2.5 text-left text-[13px]"
+                                    >
+                                        <span className={`neu-btn flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[6px] text-[10px] ${done ? "text-[#6fd6c3] [box-shadow:inset_2px_2px_5px_rgba(0,0,0,0.5),inset_-2px_-2px_5px_rgba(255,255,255,0.035)]" : "text-transparent"}`}>✓</span>
+                                        <span className={done ? "text-[#5c6270] line-through" : "text-[#b8bdc9]"}>{t.title}</span>
+                                    </button>
+                                );
+                            })}
+                            {!isCompleted && (newTaskFor === goal.id ? (
+                                <input
+                                    autoFocus
+                                    value={newTaskTitle}
+                                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                                    onBlur={() => handleCreateTask(goal.id)}
+                                    onKeyDown={(e) => { if (e.key === "Enter") handleCreateTask(goal.id); if (e.key === "Escape") { setNewTaskTitle(""); setNewTaskFor(null); } }}
+                                    placeholder="Action item…"
+                                    className="neu-inset w-full rounded-[10px] border-none px-2.5 py-1.5 text-[13px] text-[#d3d7e0] outline-none"
+                                />
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setNewTaskFor(goal.id)}
+                                    className="text-[12px] font-semibold text-[#868da0] hover:text-[#d3d7e0] transition-colors"
+                                >+ Action item</button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </GlassCard>
         );

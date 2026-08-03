@@ -129,3 +129,26 @@ export async function toggleMilestone(milestoneId: string, currentStatus: Milest
     if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
 }
+
+export async function createGoalTask(goalId: string, title: string) {
+    const t = title.trim();
+    if (!t) throw new Error("Task title is required");
+    const { supabase, user } = await requireUser();
+    // Ownership: confirm the goal is the caller's
+    const { data: goal } = await supabase.from("goals").select("id").eq("id", goalId).eq("user_id", user.id).single();
+    if (!goal) throw new Error("Goal not found");
+    const { error } = await supabase.from("tasks").insert({
+        user_id: user.id, title: t, priority: 3, status: "todo", goal_id: goalId,
+    });
+    if (error) throw new Error(error.message);
+    revalidatePath("/dashboard/goals");
+}
+
+export async function toggleGoalTask(taskId: string, done: boolean) {
+    const { supabase, user } = await requireUser();
+    const { error } = await supabase.from("tasks")
+        .update({ status: done ? "done" : "todo" })
+        .eq("id", taskId).eq("user_id", user.id);
+    if (error) throw new Error(error.message);
+    revalidatePath("/dashboard/goals");
+}
