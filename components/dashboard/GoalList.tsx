@@ -50,6 +50,8 @@ function GoalForm({ initial, habits, budgets, onDone }: { initial?: Goal; habits
     const [deadline, setDeadline] = useState(initial?.deadline ?? "");
     const [habitId, setHabitId] = useState(initial?.habit_id ?? "");
     const [category, setCategory] = useState(initial?.category ?? "");
+    const [goalType, setGoalType] = useState<"money" | "count">(initial?.goal_type ?? "money");
+    const [unit, setUnit] = useState(initial?.unit ?? "");
     const categories = [...new Set(budgets.map((b) => b.category))];
 
     function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -58,6 +60,8 @@ function GoalForm({ initial, habits, budgets, onDone }: { initial?: Goal; habits
         fd.set("deadline", deadline);
         fd.set("habit_id", habitId);
         fd.set("category", category);
+        fd.set("goal_type", goalType);
+        fd.set("unit", goalType === "count" ? unit : "");
         startTransition(async () => {
             try {
                 if (initial) {
@@ -75,12 +79,58 @@ function GoalForm({ initial, habits, budgets, onDone }: { initial?: Goal; habits
     return (
         <form onSubmit={submit} className="space-y-4 mt-2">
             <div>
+                <span className={labelCls}>Type</span>
+                <div className="flex gap-2">
+                    {(["money", "count"] as const).map((t) => (
+                        <button
+                            key={t}
+                            type="button"
+                            onClick={() => setGoalType(t)}
+                            className={`neu-btn flex-1 rounded-[12px] px-3 py-2.5 text-sm font-semibold ${
+                                goalType === t
+                                    ? "text-[#6fd6c3] [box-shadow:inset_3px_3px_7px_rgba(0,0,0,0.5),inset_-3px_-3px_7px_rgba(255,255,255,0.035)]"
+                                    : "text-[#868da0]"
+                            }`}
+                        >
+                            {t === "money" ? "Money" : "Count"}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div>
                 <label htmlFor="goal-title" className={labelCls}>Title</label>
                 <input id="goal-title" name="title" type="text" required defaultValue={initial?.title} placeholder="Goal title" className={inputCls} />
             </div>
-            <div>
-                <label htmlFor="goal-target" className={labelCls}>Target Amount</label>
-                <input id="goal-target" name="target_amount" type="number" required min="0" step="any" defaultValue={initial?.target_amount} placeholder="0" className={inputCls} />
+            <div className={goalType === "count" ? "flex gap-3" : ""}>
+                <div className="flex-1">
+                    <label htmlFor="goal-target" className={labelCls}>
+                        {goalType === "money" ? "Target amount ($)" : "Target count"}
+                    </label>
+                    <input
+                        id="goal-target"
+                        name="target_amount"
+                        type="number"
+                        required
+                        min="0"
+                        step={goalType === "count" ? "1" : "any"}
+                        defaultValue={initial?.target_amount}
+                        placeholder="0"
+                        className={inputCls}
+                    />
+                </div>
+                {goalType === "count" && (
+                    <div className="w-[42%]">
+                        <label htmlFor="goal-unit" className={labelCls}>Unit (optional)</label>
+                        <input
+                            id="goal-unit"
+                            type="text"
+                            value={unit}
+                            onChange={(e) => setUnit(e.target.value)}
+                            placeholder="e.g. books, times"
+                            className={inputCls}
+                        />
+                    </div>
+                )}
             </div>
             <div>
                 <span className={labelCls}>Deadline (optional)</span>

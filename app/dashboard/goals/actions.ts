@@ -19,6 +19,8 @@ export async function createGoal(formData: FormData) {
     const deadline = (formData.get("deadline") as string)?.trim() || null;
     const habit_id = (formData.get("habit_id") as string)?.trim() || null;
     const category = (formData.get("category") as string)?.trim() || null;
+    const goal_type = (formData.get("goal_type") as string) === "count" ? "count" : "money";
+    const unit = goal_type === "count" ? ((formData.get("unit") as string)?.trim() || null) : null;
     const { error } = await supabase.from("goals").insert({
         user_id: user.id,
         title: title.trim(),
@@ -28,6 +30,8 @@ export async function createGoal(formData: FormData) {
         status: "active",
         habit_id,
         category,
+        goal_type,
+        unit,
     });
     if (error) throw new Error(error.message);
     revalidatePath("/dashboard/goals");
@@ -43,6 +47,8 @@ export async function updateGoal(formData: FormData) {
     const status = formData.get("status") as string;
     const habit_id = (formData.get("habit_id") as string)?.trim() || null;
     const category = (formData.get("category") as string)?.trim() || null;
+    const goal_type = (formData.get("goal_type") as string) === "count" ? "count" : "money";
+    const unit = goal_type === "count" ? ((formData.get("unit") as string)?.trim() || null) : null;
     // Only stamp completed_at on the transition into "completed" so re-saving
     // a completed goal doesn't rewrite its finish date.
     const { data: existing } = await supabase.from("goals").select("status").eq("id", id).eq("user_id", user.id).single();
@@ -58,6 +64,8 @@ export async function updateGoal(formData: FormData) {
         status,
         habit_id,
         category,
+        goal_type,
+        unit,
         ...(completed_at !== undefined && { completed_at }),
     }).eq("id", id).eq("user_id", user.id);
     if (error) throw new Error(error.message);
