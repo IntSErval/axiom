@@ -255,16 +255,24 @@ export function GoalList({
 
     const [insight, setInsight] = useState<string | null>(null);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
+        const momentum: Record<string, string> = {};
+        for (const g of initialGoals) {
+            if (g.status !== "active") continue;
+            const cur = deriveCurrent(g, habitLogs, transactions) ?? g.current_amount;
+            const act = activityDates(g, habitLogs, transactions)
+                ?? initialCheckins.filter((c) => c.goal_id === g.id).map((c) => c.created_at.slice(0, 10));
+            momentum[g.id] = computeMomentum(g, cur, act).temp;
+        }
         fetch("/api/nim/goals-agent", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ goals: initialGoals, milestones: initialMilestones }),
+            body: JSON.stringify({ goals: initialGoals, milestones: initialMilestones, momentum }),
         })
             .then(r => r.json())
             .then(d => setInsight(d.insight ?? null))
-            .catch(() => {}); // silently fail — AI is non-critical
+            .catch(() => {});
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const [newGoalOpen, setNewGoalOpen] = useState(false);
