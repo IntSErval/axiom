@@ -306,6 +306,14 @@ export function GoalList({
         });
     }
 
+    function stepCount(goal: Goal, delta: number) {
+        const raw = progressInputs[goal.id];
+        const cur = raw === undefined || raw === "" ? goal.current_amount : Number(raw);
+        const base = isNaN(cur) ? goal.current_amount : cur;
+        const next = Math.max(0, Math.min(goal.target_amount, base + delta));
+        setProgressInputs((p) => ({ ...p, [goal.id]: String(next) }));
+    }
+
     function handleToggleMilestone(ms: Milestone) {
         const prev = milestones;
         const next: MilestoneStatus = ms.status === "achieved" ? "pending" : "achieved";
@@ -439,7 +447,31 @@ export function GoalList({
                                 + Milestone
                             </button>
                         )}
-                        {!isCompleted && derived === null && (
+                        {!isCompleted && derived === null && goal.goal_type === "count" && (
+                            <div className="ml-auto flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => stepCount(goal, -1)}
+                                    className="neu-btn h-8 w-8 rounded-[10px] text-base font-bold text-[#868da0]"
+                                    aria-label="Decrease"
+                                >−</button>
+                                <span className="min-w-[2ch] text-center text-[13px] tabular-nums text-[#d3d7e0]">
+                                    {progressInputs[goal.id] ?? String(goal.current_amount)}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => stepCount(goal, 1)}
+                                    className="neu-btn h-8 w-8 rounded-[10px] text-base font-bold text-[#6fd6c3]"
+                                    aria-label="Increase"
+                                >+</button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleProgressUpdate(goal)}
+                                    className="neu-btn rounded-[11px] px-3 py-2 text-xs font-semibold text-[#6fd6c3]"
+                                >✓ Log</button>
+                            </div>
+                        )}
+                        {!isCompleted && derived === null && goal.goal_type === "money" && (
                             <div className="ml-auto flex items-center gap-2">
                                 <input
                                     type="number"
@@ -455,9 +487,7 @@ export function GoalList({
                                     type="button"
                                     onClick={() => handleProgressUpdate(goal)}
                                     className="neu-btn rounded-[11px] px-[15px] py-2 text-xs font-semibold text-[#6fd6c3]"
-                                >
-                                    Update
-                                </button>
+                                >Update</button>
                             </div>
                         )}
                     </div>
