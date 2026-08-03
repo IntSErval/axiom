@@ -8,6 +8,7 @@ import { WheelDatePicker, WheelSelect } from "@/components/ui/WheelDatePicker";
 import { EditIcon, DeleteIcon } from "@/components/ui/icons";
 import type { Goal, Milestone, MilestoneStatus, GoalCheckin, Habit, HabitLog, Budget, Transaction } from "@/lib/database";
 import { deriveCurrent, activityDates } from "@/lib/goal-progress";
+import { computePace, computeMomentum, formatGoalAmount } from "@/lib/goal-calc";
 import {
     createGoal,
     updateGoal,
@@ -23,21 +24,7 @@ const labelCls = "block text-xs text-[#868da0] mb-1";
 
 const DAY_MS = 86400000;
 
-// ── Pace / retrospective math ──────────────────────────────────────────────
-function computePace(goal: Goal, current: number) {
-    if (!goal.deadline || goal.target_amount <= 0) return null;
-    const created = new Date(goal.created_at).getTime();
-    const deadline = new Date(goal.deadline + "T00:00:00").getTime();
-    const totalDays = (deadline - created) / DAY_MS;
-    if (totalDays <= 0) return null;
-    const elapsedDays = Math.max((Date.now() - created) / DAY_MS, 0);
-    // + = behind schedule, − = ahead. Linear expectation from creation → deadline.
-    const behindDays = elapsedDays - (current / goal.target_amount) * totalDays;
-    const velocity = elapsedDays > 0.04 ? current / elapsedDays : 0;
-    const projected = velocity > 0 ? new Date(created + (goal.target_amount / velocity) * DAY_MS) : null;
-    return { behindDays, projected };
-}
-
+// ── Retrospective math ─────────────────────────────────────────────────────
 function computeRetro(goal: Goal, activity: string[]) {
     const finished = goal.completed_at ?? goal.created_at;
     const days = Math.max(1, Math.round((new Date(finished).getTime() - new Date(goal.created_at).getTime()) / DAY_MS));
