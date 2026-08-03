@@ -15,10 +15,16 @@ function lerpHex(a: string, b: string, t: number) {
 
 /* Notch-based radial gauge: 36 notches over a 270° sweep, active notches ramp
    along a duotone gradient (teal on-pace, amber when behind), track carved dark. */
-export function NotchRing({ pct, size, label, behind = false }: { pct: number; size: number; label: string; behind?: boolean }) {
+export function NotchRing({ pct, size, label, behind = false, temp }: { pct: number; size: number; label: string; behind?: boolean; temp?: "hot" | "warm" | "cool" | "cold" }) {
     const N = 36;
     const active = Math.round((Math.min(100, Math.max(0, pct)) / 100) * N);
-    const ramp = behind ? ["#c8813f", "#f7c396"] : ["#3f9c8b", "#96ecd9"];
+    const RAMPS: Record<string, [string, string]> = {
+        hot: ["#3f9c8b", "#96ecd9"],
+        warm: ["#4d8f79", "#a7e0c0"],
+        cool: ["#a8823f", "#e6c48a"],
+        cold: ["#c8813f", "#f7c396"],
+    };
+    const ramp = temp ? RAMPS[temp] : behind ? RAMPS.cold : RAMPS.hot;
     return (
         <div
             className="relative flex flex-none items-center justify-center rounded-full [box-shadow:-5px_-5px_12px_rgba(255,255,255,0.05),7px_7px_16px_rgba(0,0,0,0.5)]"

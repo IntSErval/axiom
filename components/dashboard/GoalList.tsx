@@ -330,6 +330,7 @@ export function GoalList({
             ?? checkins.filter((c) => c.goal_id === goal.id).map((c) => c.created_at.slice(0, 10));
         const isCompleted = goal.status === "completed";
         const pace = isCompleted ? null : computePace(goal, current);
+        const momentum = isCompleted ? null : computeMomentum(goal, current, activity);
         const retro = isCompleted ? computeRetro(goal, activity) : null;
 
         const behind = !!pace && pace.behindDays >= 1;
@@ -339,14 +340,14 @@ export function GoalList({
                 className={`group flex gap-6 rounded-[24px] px-7 py-6 transition-[transform,box-shadow] duration-200 [transition-timing-function:cubic-bezier(0.23,1,0.32,1)] hover:-translate-y-[2px] hover:[box-shadow:-10px_-10px_24px_rgba(255,255,255,0.055),13px_13px_30px_rgba(0,0,0,0.62)] ${isCompleted ? "opacity-80" : ""}`}
             >
                 <div className="self-center">
-                    <NotchRing pct={pct} size={86} label={`${pct.toFixed(0)}%`} behind={behind} />
+                    <NotchRing pct={pct} size={86} label={`${pct.toFixed(0)}%`} temp={momentum?.temp} />
                 </div>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-3.5">
                         <span className="text-base font-semibold text-[#e3e6ec]">{goal.title}</span>
                         <span className="flex flex-none items-center gap-3">
                             <span className="text-[12.5px] tabular-nums text-[#868da0]">
-                                {current.toLocaleString()} / {goal.target_amount.toLocaleString()}
+                                {formatGoalAmount(goal, current)} / {formatGoalAmount(goal, goal.target_amount)}
                             </span>
                             <button
                                 type="button"
@@ -366,6 +367,18 @@ export function GoalList({
                             </button>
                         </span>
                     </div>
+
+                    {momentum && (
+                        <div className="mt-2 flex items-center gap-2">
+                            <span
+                                className="neu-inset inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                                style={{ color: momentum.temp === "hot" || momentum.temp === "warm" ? "#6fd6c3" : "#f2a86f" }}
+                            >
+                                <span aria-hidden>{momentum.temp === "hot" ? "🔥" : momentum.temp === "cold" ? "❄️" : "◐"}</span>
+                                {momentum.temp === "hot" ? "Hot streak" : momentum.temp === "warm" ? "On track" : momentum.temp === "cool" ? "Cooling" : "Cold"}
+                            </span>
+                        </div>
+                    )}
 
                     {pace && (
                         <div className={`mt-[7px] text-xs font-semibold ${behind ? "text-[#f2a86f]" : "text-[#6fd6c3]"}`}>
